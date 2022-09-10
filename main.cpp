@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <storage.h>
 
 using namespace std;
 
@@ -31,23 +32,12 @@ int main()
             inputtoken.push_back(word);
         }
 
-        for(int i=0; i<inputtoken.size(); i++){
-            cout << inputtoken[i] << " ";
-        }
-        cout << endl;
-
         Record crecord;
         strcpy(crecord.tconst, inputtoken[0].c_str());
         crecord.avgRating = stod(inputtoken[1]);
         crecord.numVotes = stoi(inputtoken[2]);
 
         cout << "tconst: " << crecord.tconst << ", avgRating: " << crecord.avgRating << ", numVotes: " << crecord.numVotes << ", sizeof: " << sizeof(crecord) << endl;
-
-        if (z < 10){
-            z++;
-        } else {
-            break;
-        }
     }
 
     inputfile.close();
