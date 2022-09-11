@@ -3,22 +3,21 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <storage.h>
+#include <math.h>
+#include "storage.h"
 
 using namespace std;
-
-struct Record {
-    char tconst[10];
-    double avgRating;
-    int numVotes;
-};
 
 int main()
 {
     ifstream inputfile("data.tsv");
     string inputstring;
 
-    int z = 0;
+    int blocksize = 200;
+    Storage dbstorage(blocksize);
+    cout << dbstorage.numofrecordsperblock << endl;
+    cout << dbstorage.blocks.size() << endl;
+
     while(getline(inputfile, inputstring)){
         if(inputstring.rfind("tconst", 0) == 0){
             continue;
@@ -32,12 +31,9 @@ int main()
             inputtoken.push_back(word);
         }
 
-        Record crecord;
-        strcpy(crecord.tconst, inputtoken[0].c_str());
-        crecord.avgRating = stod(inputtoken[1]);
-        crecord.numVotes = stoi(inputtoken[2]);
+        dbstorage.addRecord(inputtoken[0], stod(inputtoken[1]), stoi(inputtoken[2]));
 
-        cout << "tconst: " << crecord.tconst << ", avgRating: " << crecord.avgRating << ", numVotes: " << crecord.numVotes << ", sizeof: " << sizeof(crecord) << endl;
+        cout << "Blockid - recordid: " << dbstorage.getNumberOfBlocks() - 1 << " - " << dbstorage.blocks[dbstorage.getNumberOfBlocks() - 1].getNumberofRecords() << " : " << dbstorage.blocks[dbstorage.getNumberOfBlocks() - 1].records[dbstorage.blocks[dbstorage.getNumberOfBlocks() - 1].getNumberofRecords() - 1].tconst << endl;
     }
 
     inputfile.close();
