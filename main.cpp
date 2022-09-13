@@ -6,6 +6,7 @@
 #include <math.h>
 #include "storage.cpp"
 #include "record.h"
+#include "bptree.cpp"
 
 using namespace std;
 
@@ -20,6 +21,8 @@ int main()
     Storage dbstorage(datastoragesize, blocksize);
     Storage instorage(indexstoragesize, blocksize);
 
+    BPTree bptree(blocksize, &dbstorage, &instorage);
+
     while(getline(inputfile, inputstring)){
         if(inputstring.rfind("tconst", 0) == 0){
             continue;
@@ -32,16 +35,25 @@ int main()
         while(getline(iss, word, '\t')){
             inputtoken.push_back(word);
         }
+        
+        Record record;
+        strcpy(record.tconst, inputtoken[0].c_str());
+        record.avgRating = stod(inputtoken[1]);
+        record.numVotes = stoi(inputtoken[2]);
 
+        void* recptr = nullptr;
         //cout << "Rcdptr: " << dbstorage.addRecord(inputtoken[0], stod(inputtoken[1]), stoi(inputtoken[2])) << endl;
-        dbstorage.addRecord(inputtoken[0], stod(inputtoken[1]), stoi(inputtoken[2]));
+        recptr = dbstorage.writeToDisk(&record, sizeof(record));
+
+        //bptree.inserttotree(stoi(inputtoken[2]), recptr);
     }
 
-    /*
-    for(int i=0;i<dbstorage.recordspointers.size();i++){
-        Record* testptr = dbstorage.recordspointers[i];
+    for(int i=0;i<dbstorage.datapointers.size();i++){
+        Record* testptr = (Record*) dbstorage.datapointers[i];
         cout << "Record: " << testptr->tconst << " - " << testptr->avgRating << " - " << testptr->numVotes << " : " << testptr << endl;
-    }*/
+    }
+
+
 
     
     //cout << "Block Size: " << blocksize << endl;
