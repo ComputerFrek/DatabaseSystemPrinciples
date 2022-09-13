@@ -9,7 +9,7 @@ using namespace std;
 class Storage {
     public:
         vector<char*> blockspointers;
-        vector<Record*> recordspointers;
+        vector<void*> datapointers;
         int numofrecordsperblock;
         size_t storagesize;
         size_t blocksize;
@@ -30,7 +30,6 @@ class Storage {
 
         //int getNumberOfDataBlocks();
 
-        //void addRecord(string inputtconst, double inputavgrating, int inputnumvotes);
         bool AllocateBlock(){
             if((numallocatedblocks * blocksize) < storagesize){
                 blockptr = storageptr + (numallocatedblocks * blocksize);
@@ -42,32 +41,21 @@ class Storage {
                 return false;
             }
         }
-
-        Record* addRecord(string inputtconst, double inputavgrating, int inputnumvotes){
-            Record record;
-            strcpy(record.tconst, inputtconst.c_str());
-            record.avgRating = inputavgrating;
-            record.numVotes = inputnumvotes;
-
-            if((currentblockutilized + sizeof(record)) > blocksize or numallocatedblocks == 0){
+        
+        void* writeToDisk(void* ptr, size_t size){
+            if((currentblockutilized + size) > blocksize or numallocatedblocks == 0){
                 if(!AllocateBlock()){
                     throw "Unable to allocate block";
                 }
             }
-            
-            //tuple<void * , uint> recaddress(blockptr, currentblockutilized);
-            //void *rcdAdr = (unsigned char *)get<0>(recaddress) + get<1>(recaddress);
-            char* testptr = blockptr + currentblockutilized;
-            memcpy(testptr, &record, sizeof(record));
-            recordspointers.push_back((Record*) testptr);
 
-            cout << "Storing " << inputtconst << " - " << inputavgrating << " - " << inputnumvotes << " : ";
-            printf("%p - %p\n", blockptr, testptr);
-            
+            char* destptr = blockptr + currentblockutilized;
+            memcpy(destptr, ptr, size);
+            datapointers.push_back(destptr);
 
-            currentblockutilized += sizeof(record);
-            
-            return (Record*) testptr;
+            currentblockutilized += size;
+
+            return destptr;
         }
 
         ~Storage(){
