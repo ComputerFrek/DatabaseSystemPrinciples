@@ -17,13 +17,14 @@ class Block {
             return records.size();
         }
 
-        void addRecord(string inputtconst, double inputavgrating, int inputnumvotes) {
+        Record* addRecord(string inputtconst, double inputavgrating, int inputnumvotes) {
             Record record;
             strcpy(record.tconst, inputtconst.c_str());
             record.avgRating = inputavgrating;
             record.numVotes = inputnumvotes;
 
             records.push_back(record);
+            return &records[records.size() - 1];
         }
 };
 

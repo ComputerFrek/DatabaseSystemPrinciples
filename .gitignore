@@ -3,3 +3,8 @@
 .DS_Store
 main
 main.dSYM
+*bk.cpp
+test
+test.cpp
+test.dSYM
+datatest.tsv

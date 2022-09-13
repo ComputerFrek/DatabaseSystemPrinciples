@@ -1,39 +1,23 @@
 #ifndef STORAGE_HEADER
 #define STORAGE_HEADER
+#include <iostream>
 #include <vector>
 #include <math.h>
-#include "block.h"
+#include "record.h"
 using namespace std;
 
 class Storage {
-    public:
-        vector <Block> blocks;
+    private:
+        vector <Block> datablocks;
+        vector <Record*> recordpointers;
         int numofrecordsperblock;
+        unsigned int storagesize;
+        unsigned int blocksize;
+    public:
+        Storage(unsigned int storagesize, unsigned int blocksize);
 
-        Storage(int blocksize) {
-            Block block;
-            numofrecordsperblock = floor(blocksize/block.getSizeofOneRecord());
-            blocks.push_back(block);
-        }
+        //int getNumberOfDataBlocks();
 
-        int getNumberOfBlocks() {
-            return blocks.size();
-        }
-
-        void addRecord(string inputtconst, double inputavgrating, int inputnumvotes) {
-            //find available
-            int currentlastblock = blocks.size();
-            //check if avaible block has space
-            if(blocks[blocks.size() - 1].getNumberofRecords() < numofrecordsperblock) {
-                blocks[blocks.size() - 1].addRecord(inputtconst, inputavgrating, inputnumvotes);
-            } else {
-                Block block;
-                blocks.push_back(block);
-                blocks[blocks.size() - 1].addRecord(inputtconst, inputavgrating, inputnumvotes);
-            }
-            //if not create new block
-        }
-
-        
+        //void addRecord(string inputtconst, double inputavgrating, int inputnumvotes);
 };
 #endif
