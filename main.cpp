@@ -45,8 +45,18 @@ int main()
         //cout << "Rcdptr: " << dbstorage.addRecord(inputtoken[0], stod(inputtoken[1]), stoi(inputtoken[2])) << endl;
         recptr = dbstorage.writeToDisk(&record, sizeof(record));
 
-        //bptree.inserttotree(stoi(inputtoken[2]), recptr);
+        bptree.inserttotree(stoi(inputtoken[2]), recptr);
+
+        for(int i = 0; i < bptree.maxkeyspernode; i++){
+            cout << bptree.root->keyptr[i].key << " : " << bptree.root->keyptr[i].dataptr << endl;
+            if(bptree.root->keyptr[i+1].dataptr == nullptr){
+                cout << endl;
+                break;
+            }
+        }
     }
+
+
 
     for(int i=0;i<dbstorage.datapointers.size();i++){
         Record* testptr = (Record*) dbstorage.datapointers[i];

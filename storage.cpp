@@ -10,7 +10,6 @@ class Storage {
     public:
         vector<char*> blockspointers;
         vector<void*> datapointers;
-        int numofrecordsperblock;
         size_t storagesize;
         size_t blocksize;
         unsigned int numallocatedblocks;
@@ -55,6 +54,12 @@ class Storage {
 
             currentblockutilized += size;
 
+            return destptr;
+        }
+
+        void* loadFromDisk(void* ptr, size_t size){
+            void* destptr = operator new(size);
+            memcpy(destptr, (char *)ptr, size);
             return destptr;
         }
 
