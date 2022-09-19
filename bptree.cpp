@@ -99,13 +99,13 @@ class BPTree {
                     for(int i = 0; i < cursor->curnumkeys; i++){
                         //Go left if smaller than key
                         if(numvotes < cursor->keyptr[i].key){
-                            cursor = cursor->keyptr[i].dataptr;
+                            cursor = (BPNode*) cursor->keyptr[i].dataptr;
                             break;
                         }
 
                         //If reach the end means larger than last key, go right
                         if(i == cursor->curnumkeys - 1){
-                            cursor = cursor->nextbpnode;
+                            cursor = (BPNode*) cursor->nextbpnode;
                             break;
                         }
                     }
@@ -225,103 +225,138 @@ class BPTree {
                         root = newroot;
                     } else {
                         //Need new parent in the middle of tree
-                        //If parent got space
-                        if(parent->curnumkeys < maxkeyspernode){
-                            //Find location in parent to insert the key
-                            int i = 0;
-                            while(i < parent->curnumkeys && numvotes > parent->keyptr[i].key){
-                                i++;
-                            }
-
-                            //Location found for key, shifting right to slot in key
-                            for(int j = parent->curnumkeys; j > i; j--){
-                                parent->keyptr[j].key = parent->keyptr[j - 1].key;
-                            }
-
-                            for(int j = parent->curnumkeys + 1; j > i + 1; j--){
-                                if(j == parent->curnumkeys + 1){
-                                    parent->nextbpnode = parent->keyptr[j - 1].dataptr;
-                                }
-                                parent->keyptr[j].dataptr = parent->keyptr[j - 1].dataptr;
-                            }
-
-                            parent->keyptr[i].key = newbpnode->keyptr[0].key;
-                            parent->keyptr[i + 1].dataptr = newbpnode;
-                        } else {
-                            //Parent no space
-                            BPNode* newparent = new BPNode(maxkeyspernode);
-
-                            BPKeyPtr* templist = new BPKeyPtr[maxkeyspernode + 1];
-                            void* lastptr = nullptr;
-
-                            for(int i = 0; i < maxkeyspernode; i++){
-                                templist[i].key = parent->keyptr[i].key;
-                            }
-
-                            for(int i = 0; i < maxkeyspernode + 1; i++){
-                                templist[i].dataptr = parent->keyptr[i].dataptr;
-                            }
-
-                            int i = 0;
-                            while(i < maxkeyspernode && newbpnode->keyptr[0].key > templist[i].key){
-                                i++;
-                            }
-
-                            //Shift right for all those after key
-                            for(int j = maxkeyspernode; j > i; j--){
-                                templist[i].key = templist[j - 1].key;
-                            }
-
-                            for(int j = maxkeyspernode + 1; j > i + 1; j--){
-                                if(j == maxkeyspernode + 1){
-                                    lastptr = templist[j - 1].dataptr;
-                                }
-                                templist[j].dataptr = templist[j - 1].dataptr;
-                            }
-
-                            newparent->isleaf = false;
-
-                            parent->curnumkeys = (maxkeyspernode + 1) / 2;
-                            newparent->curnumkeys = (maxkeyspernode) - ((maxkeyspernode + 1) / 2);
-
-                            for(int i = 0; i < parent->curnumkeys; i++){
-                                parent->keyptr[i].key = templist[i].key;
-                            }
-
-                            for(int i = 0, int j = parent->curnumkeys + 1; i < newparent->curnumkeys; i++, j++){
-                                newparent->keyptr[i].key = templist[i].key;
-                            }
-
-                            for(int i = 0, int j = parent->curnumkeys + 1; i < newparent->curnumkeys + 1; i++, j++){
-                                newparent->keyptr[i].dataptr = templist[j].dataptr;
-                            }
-
-                            for(int i = parent->curnumkeys; i < maxkeyspernode; i++){
-                                parent->keyptr[i].key = 0;
-                            }
-
-                            for(int i = parent->curnumkeys + 1; i < maxkeyspernode; i++){
-                                if(i == parent->curnumkeys + 1){
-                                    parent->nextbpnode = nullptr;
-                                }
-                                parent->keyptr[i].dataptr = nullptr;
-                            }
-
-                            parent->keyptr[parent->curnumkeys].dataptr = newparent;
-
-                            if(parent == root){
-                                BPNode* newroot = new BPNode(maxkeyspernode);
-
-                                newroot->keyptr[0].key = parent->keyptr[parent->curnumkeys].key;
-                                newroot->keyptr[0].dataptr = cursor;
-                                newroot->keyptr[1].dataptr = newparent;
-
-                            } else {
-                                //recursive
-                            }
-                        }
+                        insertinsert(numvotes, parent, newbpnode);
                     }
                 }
             }
+        }
+
+        void insertinsert(int numvotes, BPNode* parent, BPNode* child) {
+            //If parent got space
+            if(parent->curnumkeys < maxkeyspernode){
+                //Find location in parent to insert the key
+                int i = 0;
+                while(i < parent->curnumkeys && numvotes > parent->keyptr[i].key){
+                    i++;
+                }
+
+                //Location found for key, shifting right to slot in key
+                for(int j = parent->curnumkeys; j > i; j--){
+                    parent->keyptr[j].key = parent->keyptr[j - 1].key;
+                }
+
+                //Shift right to slot in for ptr, if last ptr, put in the nextbpnode
+                for(int j = parent->curnumkeys + 1; j > i + 1; j--){
+                    if(j == parent->curnumkeys + 1){
+                        parent->nextbpnode = parent->keyptr[j - 1].dataptr;
+                        continue;
+                    }
+                    parent->keyptr[j].dataptr = parent->keyptr[j - 1].dataptr;
+                }
+
+                //Update keys & pointers for new child
+                parent->keyptr[i].key = numvotes;
+                parent->curnumkeys++;
+                parent->keyptr[i + 1].dataptr = child;
+            } else {
+                //Parent no space
+                //Create new parent node
+                BPNode* newparent = new BPNode(maxkeyspernode);
+
+                //Create a temp list to store first
+                BPKeyPtr* templist = new BPKeyPtr[maxkeyspernode];
+                //Lastptr to act as the last ptr cox non leaf can have keys + 1 ptr, this is the +1
+                void* lastptr = nullptr;
+
+                //Copy all the keys & ptr
+                for(int i = 0; i < maxkeyspernode; i++){
+                    templist[i].key = parent->keyptr[i].key;
+                    templist[i].dataptr = parent->keyptr[i].dataptr;
+                }
+
+                //Search location to insert key & ptr
+                int i = 0;
+                while(i < maxkeyspernode && numvotes > templist[i].key){
+                    i++;
+                }
+
+                //Shift right for all those after pos we want to slot in
+                for(int z = maxkeyspernode; z > i; z--){
+                    templist[z].key = templist[z - 1].key;
+                }
+
+                //Shift right for ptr
+                for(int z = maxkeyspernode + 1; z > i + 1; z--){
+                    if(z == maxkeyspernode + 1){
+                        lastptr = templist[z - 1].dataptr;
+                        continue;
+                    }
+                    templist[z].dataptr = templist[z - 1].dataptr;
+                }
+
+                //Insert in the new key & ptr
+                templist[i].key = numvotes;
+                templist[i + 1].dataptr = child;
+
+                //Mark the new parent as not leaf, although the default
+                newparent->isleaf = false;
+
+                //Calculate the number of keys we should have based on lect.
+                //parent now being the left parent, newparent is the right parent
+                parent->curnumkeys = ceil(maxkeyspernode / 2);
+                newparent->curnumkeys = floor(maxkeyspernode / 2);
+
+                //Put back the keys & ptr
+                bool putright = false;
+                int z = 0;
+                for(int i = 0; i < maxkeyspernode; i++){
+                    if(putright == false){
+                        parent->keyptr[z].key = templist[i].key;
+                        parent->keyptr[z].dataptr = templist[i].dataptr;
+                    } else {
+                        newparent->keyptr[z].key = templist[i].key;
+                        newparent->keyptr[z].dataptr = templist[i].dataptr;
+                        if(i == maxkeyspernode - 1){
+                            newparent->keyptr[z + 1].dataptr = lastptr;
+                        }
+                    }
+
+                    if(z == parent->curnumkeys){
+                        putright = true;
+                        z = 0;
+                    } else {
+                        z++;
+                    }
+                }
+
+                //Erased unused key & ptr space
+                for(int i = parent->curnumkeys; i < maxkeyspernode; i++){
+                    parent->keyptr[i].key = 0;
+                }
+
+                for(int i = parent->curnumkeys + 1; i < maxkeyspernode; i++){
+                    if(i == parent->curnumkeys + 1){
+                        parent->nextbpnode = nullptr;
+                    }
+                    parent->keyptr[i].dataptr = nullptr;
+                }
+
+                //parent->keyptr[parent->curnumkeys].dataptr = newparent;
+
+                if(parent == root){
+                    BPNode* newroot = new BPNode(maxkeyspernode);
+
+                    newroot->keyptr[0].key = parent->keyptr[parent->curnumkeys].key;
+                    newroot->keyptr[0].dataptr = parent;
+                    newroot->keyptr[1].dataptr = newparent;
+                    newroot->isleaf = false;
+                    
+                    root = newroot;
+                } else {
+                    //Find parent
+                    insertinsert(templist[parent->curnumkeys].key, parent, newparent);
+                }
+            }
+
         }
 };
