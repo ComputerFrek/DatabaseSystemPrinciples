@@ -48,6 +48,9 @@ int main()
         recptr = dbstorage.writeToDisk(&record, sizeof(record));
 
         cout << "tconst: " << record.tconst << " - numvotes: " << record.numVotes << endl;
+        if(record.numVotes == 1572){
+            cout << "Split root" << endl;
+        }
         bptree.inserttotree(stoi(inputtoken[2]), recptr);
 
         /*
