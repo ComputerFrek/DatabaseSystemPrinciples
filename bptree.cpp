@@ -45,11 +45,13 @@ class BPTree {
         BPNode* root;
         void* rootstorageptr;
         int maxkeyspernode;
+        int s;
 
         BPTree(size_t blocksize, Storage *data, Storage *index){
             size_t noderemainingsize = blocksize - sizeof(void*) - sizeof(int) - sizeof(bool);
 
             maxkeyspernode = 0;
+            s = 0;
             size_t usedsize = sizeof(BPKeyPtr);
             while((usedsize + sizeof(BPKeyPtr)) <= noderemainingsize){
                 usedsize += sizeof(BPKeyPtr);
@@ -84,11 +86,16 @@ class BPTree {
                 
                 //rootstorageptr = storedptr;
                 root = node;
+                cout << "root: ";
+                displaybpnode(root);
             } else {
                 BPNode* cursor = root;
                 BPNode* parent;
                 void* parentstorageptr;
                 void* cursorstorageptr;
+
+                cout << "root: ";
+                displaybpnode(root);
 
                 //Keep searching till reach leaf
                 while(cursor->isleaf == false){
@@ -103,12 +110,23 @@ class BPTree {
                             break;
                         }
 
-                        //If reach the end means larger than last key, go right
                         if(i == cursor->curnumkeys - 1){
-                            cursor = (BPNode*) cursor->nextbpnode;
+                            if((i + 1) > maxkeyspernode){
+                                cursor = (BPNode*) cursor->nextbpnode;
+                            } else {
+                                cursor = (BPNode*) cursor->keyptr[i + 1].dataptr;
+                            }
                             break;
                         }
                     }
+
+                    
+                    cout << "parent: ";
+                    displaybpnode(parent);
+
+                    cout << "child: ";
+                    displaybpnode(cursor);
+                    
                 }
 
                 //Reach leaf, find space to put
@@ -148,9 +166,14 @@ class BPTree {
                         cursor->keyptr[i].key = numvotes;
                         cursor->curnumkeys++;
                     }
+                    cout << "space to put: ";
+                    displaybpnode(cursor);
                 } else {
                     //Overflow
                     BPNode* newbpnode = new BPNode(maxkeyspernode);
+
+                    //New node is leaf
+                    newbpnode->isleaf = true;
 
                     //Create temp list & copy contents of existing
                     BPKeyPtr* templist = new BPKeyPtr[maxkeyspernode + 1];
@@ -175,7 +198,7 @@ class BPTree {
                     }
 
                     //Shift all back
-                    for(int j = maxkeyspernode; j > i; j--){
+                    for(int j = maxkeyspernode + 1; j > i; j--){
                         templist[j].key = templist[j - 1].key;
                         templist[j].dataptr = templist[j - 1].dataptr;
                     }
@@ -190,23 +213,28 @@ class BPTree {
                     templist[i].key = numvotes;
                     templist[i].dataptr = llnode;
 
+                    cout << "templist: ";
+                    for(int i=0; i < maxkeyspernode + 1; i++){
+                        cout << templist[i].dataptr << "|" << templist[i].key << "|";
+                    }
+                    cout << endl;
+
                     //Calc the number of keys
-                    cursor->curnumkeys = (maxkeyspernode + 1) / 2;
-                    newbpnode->curnumkeys = (maxkeyspernode + 1) - ((maxkeyspernode + 1) / 2);
+                    cursor->curnumkeys = ceil((maxkeyspernode + 1) / 2.0);
+                    newbpnode->curnumkeys = floor((maxkeyspernode + 1) / 2.0);
 
                     //Set the next node to the new node
                     cursor->nextbpnode = newbpnode;
 
                     //Add back the items into bpnodes from templist
-                    i = 0;
                     for(i = 0; i < cursor->curnumkeys; i++){
                         cursor->keyptr[i].key = templist[i].key;
                         cursor->keyptr[i].dataptr = templist[i].dataptr;
                     }
 
                     for(int j = 0; j < newbpnode->curnumkeys; i++, j++){
-                        newbpnode->keyptr[j].key = templist[j].key;
-                        newbpnode->keyptr[j].dataptr = templist[j].dataptr;
+                        newbpnode->keyptr[j].key = templist[i].key;
+                        newbpnode->keyptr[j].dataptr = templist[i].dataptr;
                     }
 
                     //Previously once full, copy all to temp list & split, need to erase the "suppose" blank space.
@@ -214,6 +242,15 @@ class BPTree {
                         cursor->keyptr[i].key = 0;
                         cursor->keyptr[i].dataptr = nullptr;
                     }
+
+                    for(int i=0; i < maxkeyspernode; i++){
+                        cout << cursor->keyptr[i].dataptr << "|" << cursor->keyptr[i].key << "|";
+                    }
+                    cout << cursor->nextbpnode << " - ";
+                    for(int i=0; i < maxkeyspernode; i++){
+                        cout << newbpnode->keyptr[i].dataptr << "|" << newbpnode->keyptr[i].key << "|";
+                    }
+                    cout << newbpnode->nextbpnode << endl;
                     
                     //If cursor was root & overflow means splitted & need new root
                     if(cursor == root) {
@@ -222,12 +259,14 @@ class BPTree {
                         newroot->keyptr[0].key = newbpnode->keyptr[0].key;
                         newroot->keyptr[1].dataptr = newbpnode;
                         newroot->isleaf = false;
+                        newroot->curnumkeys = 1;
                         root = newroot;
                     } else {
                         //Need new parent in the middle of tree
                         insertinsert(numvotes, parent, newbpnode);
                     }
                 }
+
             }
         }
 
@@ -247,7 +286,7 @@ class BPTree {
 
                 //Shift right to slot in for ptr, if last ptr, put in the nextbpnode
                 for(int j = parent->curnumkeys + 1; j > i + 1; j--){
-                    if(j == parent->curnumkeys + 1){
+                    if(j == maxkeyspernode + 1){
                         parent->nextbpnode = parent->keyptr[j - 1].dataptr;
                         continue;
                     }
@@ -303,8 +342,8 @@ class BPTree {
 
                 //Calculate the number of keys we should have based on lect.
                 //parent now being the left parent, newparent is the right parent
-                parent->curnumkeys = ceil(maxkeyspernode / 2);
-                newparent->curnumkeys = floor(maxkeyspernode / 2);
+                parent->curnumkeys = ceil(maxkeyspernode / 2.0);
+                newparent->curnumkeys = floor(maxkeyspernode / 2.0);
 
                 //Put back the keys & ptr
                 bool putright = false;
@@ -341,15 +380,13 @@ class BPTree {
                     parent->keyptr[i].dataptr = nullptr;
                 }
 
-                //parent->keyptr[parent->curnumkeys].dataptr = newparent;
-
                 if(parent == root){
                     BPNode* newroot = new BPNode(maxkeyspernode);
-
-                    newroot->keyptr[0].key = parent->keyptr[parent->curnumkeys].key;
                     newroot->keyptr[0].dataptr = parent;
+                    newroot->keyptr[0].key = parent->keyptr[parent->curnumkeys].key;
                     newroot->keyptr[1].dataptr = newparent;
                     newroot->isleaf = false;
+                    newroot->curnumkeys = 1;
                     
                     root = newroot;
                 } else {
@@ -358,5 +395,47 @@ class BPTree {
                 }
             }
 
+        }
+
+        void displaybpnode(BPNode* curnode){
+            cout << curnode->isleaf << "|";
+            for(int z = 0; z < maxkeyspernode; z++){
+                if(curnode->keyptr[z].dataptr == nullptr){
+                    cout << "null|";
+                } else {
+                    cout << curnode->keyptr[z].dataptr << "|";
+                }
+                
+                if(curnode->keyptr[z].key == 0){
+                    cout << "x|";
+                } else {
+                    cout << curnode->keyptr[z].key << "|";
+                }
+            }
+
+            if(curnode->nextbpnode == nullptr){
+                cout << "null";
+            } else {
+                cout << curnode->nextbpnode;
+            }
+
+            cout << endl;
+        }
+
+        void displaytree(BPNode* curnode, int curlevel){
+            if(curnode != nullptr){
+                cout << " level " << curlevel << ": ";
+                for(int i = 0; i < curlevel; i++){
+                    cout << "   ";
+                }
+            }
+
+            displaybpnode(curnode);
+
+            if(curnode->isleaf != true){
+                for(int i = 0; i < curnode->curnumkeys + 1; i++){
+                    displaytree((BPNode*) curnode->keyptr[i].dataptr, curlevel + 1);
+                }
+            }
         }
 };
