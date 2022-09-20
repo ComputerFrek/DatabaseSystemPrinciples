@@ -6,8 +6,8 @@
 #include <vector>
 #include <unordered_map>
 
-#include "Storage.cpp"
-#include "BPTree.cpp"
+#include "storage.cpp"
+#include "bptree.cpp"
 #include "types.h"
 
 using namespace std;
