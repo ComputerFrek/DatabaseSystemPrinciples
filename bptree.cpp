@@ -256,6 +256,7 @@ class BPlusTree {
         }
         // Otherwise, parent is internal, so we need to split and make a new parent internally again.
         // This is done recursively if needed.
+        // Here
         else
         {
           BPNode *parentDiskAddress = findParent((BPNode *)rootAddress, cursorDiskAddress, cursor->keys[0]);
@@ -1106,7 +1107,7 @@ class BPlusTree {
             root = newRoot;
           }
           // If we are not at the root, we need to insert a new parent in the middle levels of the tree.
-          else //here
+          else
           {
             insertInternal(newLeaf->keys[0], (BPNode *)parentDiskAddress, (BPNode *)newLeafAddress.blockAddress);
           }
