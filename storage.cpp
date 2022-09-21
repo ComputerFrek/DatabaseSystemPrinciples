@@ -8,86 +8,100 @@
 
 #include "types.h"
 
-// We need to create a general memory pool that can be used for both the relational data and the index.
-// This pool should be able to assign new blocks if necessary.
+using namespace std;
 
-// Constructors
 class Storage{
   private:
-    std::size_t maxPoolSize;    // Maximum size allowed for pool.
-    std::size_t blockSize;      // Size of each block in pool in bytes.
-    std::size_t sizeUsed;       // Current size used up for storage (total block size).
-    std::size_t actualSizeUsed; // Actual size used based on records stored in storage.
-    std::size_t blockSizeUsed;  // Size used up within the curent block we are pointing to.
+    size_t maxstoragesize;    // Maximum size allowed for storage.
+    size_t blocksize;      // Size of each block in storage in bytes.
+    size_t blocksizeused;       // Current size used up for storage (total block size).
+    size_t actualsizeused; // Actual size used based on records stored in storage.
+    size_t curblocksizeused;  // Size used up within the curent block we are pointing to.
 
-    int allocated;      // Number of currently allocated blocks.
-    int blocksAccessed; // Counts number of blocks accessed.
+    int blocksallocated;  // Number of currently allocated blocks.
+    int blocksaccessed;   // Counts number of blocks accessed.
+    int blocksavailable;  // Number of available blocks.
 
-    void *pool;  // Pointer to the memory pool.
-    void *block; // Current block pointer we are inserting to.
+    unsigned char* poolptr;  // Pointer to the memory pool.
+    unsigned char* blockptr; // Current block pointer we are inserting to.
   public:
-    Storage(std::size_t maxPoolSize, std::size_t blockSize){
-      this->maxPoolSize = maxPoolSize;
-      this->blockSize = blockSize;
-      this->sizeUsed = 0;
-      this->actualSizeUsed = 0;
-      this->allocated = 0;
+    Storage(size_t maxstoragesize, size_t blocksize) {
+      this->maxstoragesize = maxstoragesize;
+      this->blocksize = blocksize;
+      this->blocksizeused = 0;
+      this->actualsizeused = 0;
+      this->blocksallocated = 0;
+      this->curblocksizeused = 0;
+      this->blocksaccessed = 0;
+      this->blocksavailable = this->maxstoragesize / this->blocksize;
 
       // Create pool of blocks.
-      this->pool = operator new(maxPoolSize);
-      std::memset(pool, '\0', maxPoolSize); // Initialize pool all to null.
-      this->block = nullptr;
-      this->blockSizeUsed = 0;
-
-      this->blocksAccessed = 0;
+      this->poolptr = new unsigned char[maxstoragesize];
+      
+      cout << "Size: " << this->maxstoragesize << " - blocksize: " << this->blocksize <<" - " << static_cast<void*>(this->poolptr)  << " -> " << static_cast<void*>(this->poolptr) + this->maxstoragesize << endl;
+      /*cout << "Blockptr: " << endl;
+      for(int i=0; i <= blocksavailable; i++){
+        cout << "Block " << i << " : " << static_cast<void*>(this->poolptr) + (i * 200) << endl;
+      }*/
+      memset(poolptr, '\0', maxstoragesize); // Initialize pool all to null.
+      this->blockptr = nullptr;
     }
 
-    bool allocateBlock()
-    {
-      // Only allocate a new block if we don't exceed maxPoolSize.
-      if (sizeUsed + blockSize <= maxPoolSize)
-      {
-        // Update variables
-        sizeUsed += blockSize;
-        block = (char *)pool + allocated * blockSize; // Set current block pointer to new block.
-        blockSizeUsed = 0;                    // Reset offset to 0.
-        allocated += 1;
+    bool allocateBlock() {
+      // Only allocate a new block if we don't exceed maxstoragesize.
+      if (blocksavailable != 0) {
+        cout << "blockavailable: " << blocksavailable << endl;
+        cout << "blocksallocated * blocksize: " << blocksallocated * blocksize << " - poolptr + blocksallocated * blocksize: " << static_cast<void*>(poolptr) + (blocksallocated * blocksize) << endl;
+        cout << "blockptr was: " << static_cast<void*>(blockptr) << endl;
+        blockptr = poolptr + (blocksallocated * blocksize); // Set current block pointer to new block.
+        cout << "blockptr: " << static_cast<void*>(blockptr) << endl;
+
+        blocksallocated++;
+        blocksavailable--;
+        blocksizeused += blocksize;
+        curblocksizeused = 0; // Reset offset to 0.
+        cout << "blocksallocated: " << blocksallocated << " blocksavailable: " << blocksavailable << " blocksizeused: " << blocksizeused << " curblocksizeused: " << curblocksizeused << endl;
+
         return true;
-      }
-      else
-      {
-        std::cout << "Error: No memory left to allocate new block (" << sizeUsed << "/" << maxPoolSize << " used)." << '\n';
+      } else {
+        cout << "Error: No memory left to allocate new block (" << blocksizeused << "/" << maxstoragesize << " used)." << '\n';
         return false;
       }
     }
 
-    Address allocate(std::size_t sizeRequired)
-    {
+    Address allocate(size_t sizeRequired) {
       // If record size exceeds block size, throw an error.
-      if (sizeRequired > blockSize)
-      {
-        std::cout << "Error: Size required larger than block size (" << sizeRequired << " vs " << blockSize << ")! Increase block size to store data." << '\n';
-        throw std::invalid_argument("Requested size too large!");
+      if (sizeRequired > blocksize) {
+        cout << "Error: Size required larger than block size (" << sizeRequired << " vs " << blocksize << ")! Increase block size to store data." << '\n';
+        throw invalid_argument("Requested size too large!");
       }
 
       // If no current block, or record can't fit into current block, make a new block.
-      if (allocated == 0 || (blockSizeUsed + sizeRequired > blockSize))
-      {
+      cout << "blocksallocated: " << blocksallocated << " curblocksizeused + sizeRequired = " << curblocksizeused + sizeRequired << " > " << blocksize << endl;
+      if (blocksallocated == 0 || (curblocksizeused + sizeRequired > blocksize)) {
         bool isSuccessful = allocateBlock();
-        if (!isSuccessful)
-        {
-          throw std::logic_error("Failed to allocate new block!");
+        if (!isSuccessful) {
+          throw logic_error("Failed to allocate new block!");
         }
       }
 
       // Update variables
-      short int offset = blockSizeUsed;
+      short int offset = curblocksizeused;
+      cout << "offset: " << offset << endl;
 
-      blockSizeUsed += sizeRequired;
-      actualSizeUsed += sizeRequired;
+      cout << "curblocksizeused was: " << curblocksizeused << " + " << sizeRequired << endl;
+      curblocksizeused += sizeRequired;
+      cout << "curblocksizeused: " << curblocksizeused << endl;
+
+      cout << "actualsizeused was: " << actualsizeused << " + " << sizeRequired << endl;
+      actualsizeused += sizeRequired;
+      cout << "actualsizeused: " << actualsizeused << endl;
 
       // Return the new memory space to put in the record.
-      Address recordAddress = {block, offset};
+      Address recordAddress;
+      recordAddress.blockAddress = blockptr;
+      recordAddress.offset = offset;
+      cout << "recordAddress: " << static_cast<void*>(recordAddress.blockAddress) << " - " << recordAddress.offset << endl;
 
       return recordAddress;
     }
@@ -101,18 +115,18 @@ class Storage{
         std::memset(addressToDelete, '\0', sizeToDelete);
 
         // Update actual size used.
-        actualSizeUsed -= sizeToDelete;
+        actualsizeused -= sizeToDelete;
 
         // If block is empty, just remove the size of the block (but don't deallocate block!).
         // Create a new test block full of NULL to test against the actual block to see if it's empty.
-        unsigned char testBlock[blockSize];
-        memset(testBlock, '\0', blockSize);
+        unsigned char testBlock[blocksize];
+        memset(testBlock, '\0', blocksize);
 
         // Block is empty, remove size of block.
-        if (memcmp(testBlock, address.blockAddress, blockSize) == 0)
+        if (memcmp(testBlock, address.blockAddress, blocksize) == 0)
         {
-          sizeUsed -= blockSize;
-          allocated--;
+          blocksizeused -= blocksize;
+          blocksallocated--;
         }
 
         return true;
@@ -125,27 +139,40 @@ class Storage{
     }
 
     // Give a block address, offset and size, returns the data there.
-    void* loadFromDisk(Address address, std::size_t size)
-    {
-      void *mainMemoryAddress = operator new(size);
-      std::memcpy(mainMemoryAddress, (char *)address.blockAddress + address.offset, size);
+    void* loadFromDisk(Address address, size_t size) {
+      void* mainMemoryAddress = operator new(size);
+
+      cout << "Reading src loc: " << static_cast<void*>(address.blockAddress) << " - " << static_cast<void*>(address.blockAddress) + address.offset << " -> " << static_cast<void*>(address.blockAddress) + address.offset + size << " : " << size << " - " << address.offset << endl;
+      cout << "Reading dst loc: " << static_cast<void*>(mainMemoryAddress) << " -> " << static_cast<void*>(mainMemoryAddress) + size << " : " << size << endl;
+      memcpy(mainMemoryAddress, (unsigned char*) address.blockAddress + address.offset, size);
 
       // Update blocks accessed
-      blocksAccessed++;
+      blocksaccessed++;
 
       return mainMemoryAddress;
     }
 
     // Saves something into the disk. Returns disk address.
-    Address saveToDisk(void *itemAddress, std::size_t size)
-    {
-      Address diskAddress = allocate(size);
-      std::memcpy((char *)diskAddress.blockAddress + diskAddress.offset, itemAddress, size);
+    Address saveToDisk(void* itemaddress, size_t size) {
+      Address diskaddress = allocate(size);
+      cout << "diskaddress: " << static_cast<void*>(diskaddress.blockAddress) << " - " << diskaddress.offset << endl;
+
+      unsigned char* curblockptr = (unsigned char*) diskaddress.blockAddress;
+      short int curoffset = diskaddress.offset;
+
+      cout << "Writing src loc: " << static_cast<void*>(itemaddress) << " -> " << static_cast<void*>(itemaddress) + size << " : " << size << endl;
+      cout << "Writing dst loc: " << static_cast<void*>(curblockptr) << " - " << static_cast<void*>(curblockptr) + curoffset << " -> " << static_cast<void*>(curblockptr) + curoffset + size << " : " << size << " - " << curoffset << endl;
+      try {
+        memcpy(curblockptr + curoffset, itemaddress, size);
+      } catch (exception& e) {
+        cerr << e.what() << endl;
+      }
+      
 
       // Update blocks accessed
-      blocksAccessed++;
+      blocksaccessed++;
 
-      return diskAddress;
+      return diskaddress;
     }
 
     // Update data in disk if I have already saved it before.
@@ -154,52 +181,52 @@ class Storage{
       std::memcpy((char *)diskAddress.blockAddress + diskAddress.offset, itemAddress, size);
 
       // Update blocks accessed
-      blocksAccessed++;
+      blocksaccessed++;
 
       return diskAddress;
     }
 
-    size_t getMaxPoolSize() const
+    size_t getmaxstoragesize() const
     {
-      return maxPoolSize;
+      return maxstoragesize;
     }
 
     // Returns the size of a block in memory pool.
-    size_t getBlockSize() const
+    size_t getblocksize() const
     {
-      return blockSize;
+      return blocksize;
     };
 
     // Returns the size used in the current block.
-    size_t getBlockSizeUsed() const
+    size_t getblocksizeused() const
     {
-      return blockSizeUsed;
+      return curblocksizeused;
     };
 
     // Returns current size used in memory pool (total blocks size).
-    size_t getSizeUsed() const
+    size_t getsizeused() const
     {
-      return sizeUsed;
+      return blocksizeused;
     }
 
     // Returns actual size of all records stored in memory pool.
-    size_t getActualSizeUsed() const
+    size_t getActualsizeused() const
     {
-      return actualSizeUsed;
+      return actualsizeused;
     }
 
-    // Returns number of currently allocated blocks.
+    // Returns number of currently blocksallocated blocks.
     int getAllocated() const {
-      return allocated;
+      return blocksallocated;
     };
 
     int getBlocksAccessed() const {
-      return blocksAccessed;
+      return blocksaccessed;
     }
 
     int resetBlocksAccessed() {
-      int tempBlocksAccessed = blocksAccessed;
-      blocksAccessed = 0;
+      int tempBlocksAccessed = blocksaccessed;
+      blocksaccessed = 0;
       return tempBlocksAccessed;
     }
 
