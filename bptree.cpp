@@ -3,6 +3,7 @@
 #include <array>
 #include <unordered_map>
 #include <cstring>
+#include <math.h>
 
 #include "storage.cpp"
 #include "types.h"
@@ -15,26 +16,30 @@ bool myNullPtr = false;
 class BPNode{
   private:
     // Variables
+    
+    friend class BPlusTree; // Let the BPlusTree class access this class' private variables.
+    friend class main;
+
+  public:
     Address* pointers;      // A pointer to an array of struct {void *blockAddress, short int offset} containing other nodes in disk.
     int* keys;            // Pointer to an array of keys in this node.
     int numKeys;            // Current number of keys in this node.
     bool isLeaf;            // Whether this node is a leaf node.
-    friend class BPlusTree; // Let the BPlusTree class access this class' private variables.
-
-  public:
     // Constructor
     BPNode(int maxKeys){
       // Initialize empty array of keys and pointers.
       keys = new int[maxKeys];
       pointers = new Address[maxKeys + 1];
 
-      for (int i = 0; i < maxKeys + 1; i++)
-      {
+      for (int i = 0; i < maxKeys + 1; i++) {
         //Address nullAddress {(void *)myNullPtr, 0};
         Address nullAddress;
         nullAddress.blockAddress = nullptr;
         nullAddress.offset = 0;
         pointers[i] = nullAddress;
+        if(i < maxKeys) {
+          keys[i] = 0;
+        }
       }
       numKeys = 0;
     }
@@ -44,56 +49,56 @@ class BPNode{
 class BPlusTree {
   private:
     // Variables
-    Storage *disk;     // Pointer to a memory pool for data blocks.
-    Storage *index;    // Pointer to a memory pool in disk for index.
-    BPNode *root;           // Pointer to the main memory root (if it's loaded).
-    void *rootAddress;    // Pointer to root's address on disk.
+    Storage* disk;     // Pointer to a memory pool for data blocks.
+    Storage* index;    // Pointer to a memory pool in disk for index.
+    BPNode* root;           // Pointer to the main memory root (if it's loaded).
+    void* rootAddress;    // Pointer to root's address on disk.
+    Address rootStorageAddress;
     int maxKeys;          // Maximum keys in a node.
     int levels;           // Number of levels in this B+ Tree.
     int numNodes;         // Number of nodes in this B+ Tree.
     size_t nodeSize; // Size of a node = Size of block.
 
     // Updates the parent node to point at both child nodes, and adds a parent node if needed.
-    void insertInternal(int key, BPNode *cursorDiskAddress, BPNode *childDiskAddress) {
+    //void insertInternal(int key, BPNode* cursorDiskAddress, BPNode* childDiskAddress) {
+    void insertInternal(int key, Address parentStorageAddress, Address newLeafStorageAddress) {
       // Load in cursor (parent) and child from disk to get latest copy.
       //Address cursorAddress{cursorDiskAddress, 0};
-      Address cursorAddress;
-      cursorAddress.blockAddress = cursorDiskAddress;
-      cursorAddress.offset = 0;
-      BPNode *cursor = (BPNode *)index->loadFromDisk(cursorAddress, nodeSize);
+      //Address cursorAddress;
+      //cursorAddress.blockAddress = cursorDiskAddress;
+      //cursorAddress.offset = 0;
+      //BPNode* cursor = (BPNode*) index->loadFromDisk(cursorAddress, nodeSize);
+      BPNode* root = nullptr;
+      BPNode* cursor = (BPNode*) parentStorageAddress.blockAddress;
 
-      if (cursorDiskAddress == rootAddress)
-      {
-        root = cursor;
+      if (parentStorageAddress.blockAddress == rootStorageAddress.blockAddress) {
+        root = (BPNode*) parentStorageAddress.blockAddress;
       }
 
       //Address childAddress{childDiskAddress, 0};
-      Address childAddress;
-      childAddress.blockAddress = childDiskAddress;
-      childAddress.offset = 0;
-      BPNode *child = (BPNode *)index->loadFromDisk(childAddress, nodeSize);
+      //Address childAddress;
+      //childAddress.blockAddress = newLeafStorageAddress.blockAddress;
+      //childAddress.offset = 0;
+      //BPNode *child = (BPNode *)index->loadFromDisk(childAddress, nodeSize);
 
+      BPNode* newLeaf = (BPNode*) newLeafStorageAddress.blockAddress;
       // If parent (cursor) still has space, we can simply add the child node as a pointer.
       // We don't have to load parent from the disk again since we still have a main memory pointer to it.
-      if (cursor->numKeys < maxKeys)
-      {
+      if (cursor->numKeys < maxKeys) {
         // Iterate through the parent to see where to put in the lower bound key for the new child.
         int i = 0;
-        while (key > cursor->keys[i] && i < cursor->numKeys)
-        {
+        while (key > cursor->keys[i] && i < cursor->numKeys) {
           i++;
         }
 
         // Now we have i, the index to insert the key in. Bubble swap all keys back to insert the new child's key.
         // We use numKeys as index since we are going to be inserting a new key.
-        for (int j = cursor->numKeys; j > i; j--)
-        {
+        for (int j = cursor->numKeys; j > i; j--) {
           cursor->keys[j] = cursor->keys[j - 1];
         }
 
         // Shift all pointers one step right (right pointer of key points to lower bound of key).
-        for (int j = cursor->numKeys + 1; j > i + 1; j--)
-        {
+        for (int j = cursor->numKeys + 1; j > i + 1; j--) {
           cursor->pointers[j] = cursor->pointers[j - 1];
         }
 
@@ -103,24 +108,21 @@ class BPlusTree {
 
         // Right side pointer of key of parent will point to the new child node.
         //Address childAddress{childDiskAddress, 0};
-        Address childAddress;
-        childAddress.blockAddress = childDiskAddress;
-        childAddress.offset = 0;
-        cursor->pointers[i + 1] = childAddress;
+        //Address childAddress;
+        //childAddress.blockAddress = newLeafStorageAddress.blockAddress;
+        //childAddress.offset = 0;
+        cursor->pointers[i + 1] = newLeafStorageAddress;
 
         // Write the updated parent (cursor) to the disk.
         //Address cursorAddress{cursorDiskAddress, 0};
-        Address cursorAddress;
-        cursorAddress.blockAddress = cursorDiskAddress;
-        cursorAddress.offset = 0;
-        index->saveToDisk(cursor, nodeSize, cursorAddress);
-      }
-      // If parent node doesn't have space, we need to recursively split parent node and insert more parent nodes.
-      else
-      {
+        //Address cursorAddress;
+        //cursorAddress.blockAddress = parentStorageAddress.blockAddress;
+        //cursorAddress.offset = 0;
+        //index->saveToDisk(cursor, nodeSize, cursorAddress);
+      } else { // If parent node doesn't have space, we need to recursively split parent node and insert more parent nodes.
         // Make new internal node (split this parent node into two).
         // Note: We DO NOT add a new key, just a new pointer!
-        BPNode *newInternal = new BPNode(maxKeys);
+        BPNode* newInternal = new BPNode(maxKeys);
 
         // Same logic as above, keep a temp list of keys and pointers to insert into the split nodes.
         // Now, we have one extra pointer to keep track of (new child's pointer).
@@ -129,69 +131,63 @@ class BPlusTree {
 
         // Copy all keys into a temp key list.
         // Note all keys are filled so we just copy till maxKeys.
-        for (int i = 0; i < maxKeys; i++)
-        {
+        for (int i = 0; i < maxKeys; i++) {
           tempKeyList[i] = cursor->keys[i];
         }
 
         // Copy all pointers into a temp pointer list.
         // There is one more pointer than keys in the node so maxKeys + 1.
-        for (int i = 0; i < maxKeys + 1; i++)
-        {
+        for (int i = 0; i < maxKeys + 1; i++) {
           tempPointerList[i] = cursor->pointers[i];
         }
 
         // Find index to insert key in temp key list.
         int i = 0;
-        while (key > tempKeyList[i] && i < maxKeys)
-        {
+        while (key > tempKeyList[i] && i < maxKeys) {
           i++;
         }
 
         // Swap all elements higher than index backwards to fit new key.
-        int j;
-        for (int j = maxKeys; j > i; j--)
-        {
+        for (int j = maxKeys; j > i; j--) {
           tempKeyList[j] = tempKeyList[j - 1];
         }
 
         // Insert new key into array in the correct spot (sorted).
         tempKeyList[i] = key;
 
+        int j;
         // Move all pointers back to fit new child's pointer as well.
-        for (int j = maxKeys + 1; j > i + 1; j--)
-        {
+        for (int j = maxKeys + 1; j > i + 1; j--) {
           tempPointerList[j] = tempPointerList[j - 1];
         }
 
         // Insert a pointer to the child to the right of its key.
         //Address childAddress = {childDiskAddress, 0};
-        Address childAddress;
-        childAddress.blockAddress = childDiskAddress;
-        childAddress.offset = 0;
-        tempPointerList[i + 1] = childAddress;
+        //Address childAddress;
+        //childAddress.blockAddress = newLeafStorageAddress.blockAddress;
+        //childAddress.offset = 0;
+        tempPointerList[i + 1] = newLeafStorageAddress;
         newInternal->isLeaf = false; // Can't be leaf as it's a parent.
 
         // Split the two new nodes into two. ⌊(n)/2⌋ keys for left.
         // For right, we drop the rightmost key since we only need to represent the pointer.
-        cursor->numKeys = (maxKeys + 1) / 2;
-        newInternal->numKeys = maxKeys - (maxKeys + 1) / 2;
+        //cursor->numKeys = (maxKeys + 1) / 2;
+        //newInternal->numKeys = maxKeys - (maxKeys + 1) / 2;
+        cursor->numKeys = ceil((maxKeys + 1) / 2.0);
+        newInternal->numKeys = floor((maxKeys + 1) / 2.0);
 
         // Reassign keys into cursor from tempkeyslist to account for new child node
-        for (int i = 0; i < cursor->numKeys; i++)
-        {
+        for (int i = 0; i < cursor->numKeys; i++) {
           cursor->keys[i] = tempKeyList[i];
         }
         
         // Insert new keys into the new internal parent node.
-        for (i = 0, j = cursor->numKeys + 1; i < newInternal->numKeys; i++, j++)
-        {
+        for (i = 0, j = cursor->numKeys + 1; i < newInternal->numKeys; i++, j++) {
           newInternal->keys[i] = tempKeyList[j];
         }
 
         // Insert pointers into the new internal parent node.
-        for (i = 0, j = cursor->numKeys + 1; i < newInternal->numKeys + 1; i++, j++)
-        {
+        for (i = 0, j = cursor->numKeys + 1; i < newInternal->numKeys + 1; i++, j++) {
           newInternal->pointers[i] = tempPointerList[j];
         }
 
@@ -201,13 +197,11 @@ class BPlusTree {
         // KIVVVVVVV
 
         // Get rid of unecessary cursor keys and pointers
-        for (int i = cursor->numKeys; i < maxKeys; i++) 
-        {
+        for (int i = cursor->numKeys; i < maxKeys; i++) {
           cursor->keys[i] = float();
         }
 
-        for (int i = cursor->numKeys + 1; i < maxKeys + 1; i++)
-        {
+        for (int i = cursor->numKeys + 1; i < maxKeys + 1; i++) {
           //Address nullAddress{nullptr, 0};
           Address nullAddress;
           nullAddress.blockAddress = nullptr;
@@ -216,31 +210,33 @@ class BPlusTree {
         }
 
         // assign the new child to the original parent
-        cursor->pointers[cursor->numKeys] = childAddress;
+        cursor->pointers[cursor->numKeys] = newLeafStorageAddress;
 
         // Save the old parent and new internal node to disk.
         //Address cursorAddress{cursorDiskAddress, 0};
-        Address cursorAddress;
-        cursorAddress.blockAddress = cursorDiskAddress;
-        cursorAddress.offset = 0;
-        index->saveToDisk(cursor, nodeSize, cursorAddress);
+        //Address cursorAddress;
+        //cursorAddress.blockAddress = parentStorageAddress.blockAddress;
+        //cursorAddress.offset = 0;
+        //index->saveToDisk(cursor, nodeSize, cursorAddress);
 
         // Address newInternalAddress{newInternal, 0};
-        Address newInternalDiskAddress = index->saveToDisk(newInternal, nodeSize);
+        //Address newInternalDiskAddress = index->saveToDisk(newInternal, nodeSize);
+        Address newInternalStorageAddress;
+        newInternalStorageAddress.blockAddress = newInternal;
+        newInternalStorageAddress.offset = 0;
 
         // If current cursor is the root of the tree, we need to create a new root.
-        if (cursor == root)
-        {
-          BPNode *newRoot = new BPNode(nodeSize);
+        if (cursor == root) {
+          BPNode* newRoot = new BPNode(nodeSize);
           // Update newRoot to hold the children.
           // Take the rightmost key of the old parent to be the root.
           // Although we threw it away, we are still using it to denote the leftbound of the old child.
           newRoot->keys[0] = cursor->keys[cursor->numKeys];
 
           // Update newRoot's children to be the previous two nodes
-          Address cursorAddress = {cursorDiskAddress, 0};
-          newRoot->pointers[0] = cursorAddress;
-          newRoot->pointers[1] = newInternalDiskAddress;
+          //Address cursorAddress = {(BPNode*) parentStorageAddress.blockAddress, 0};
+          newRoot->pointers[0] = parentStorageAddress;
+          newRoot->pointers[1] = newInternalStorageAddress;
 
           // Update variables for newRoot
           newRoot->isLeaf = false;
@@ -249,21 +245,23 @@ class BPlusTree {
           root = newRoot;
 
           // Save newRoot into disk.
-          Address newRootAddress = index->saveToDisk(root, nodeSize);
+          //Address newRootAddress = index->saveToDisk(root, nodeSize);
 
           // Update rootAddress
-          rootAddress = newRootAddress.blockAddress;
+          //rootAddress = newRootAddress.blockAddress;
+          rootStorageAddress.blockAddress = root;
         }
         // Otherwise, parent is internal, so we need to split and make a new parent internally again.
         // This is done recursively if needed.
         // Here
         else
         {
-          BPNode *parentDiskAddress = findParent((BPNode *)rootAddress, cursorDiskAddress, cursor->keys[0]);
+          Address newParentStorageAddress = findParent(cursor->keys[0], rootStorageAddress, parentStorageAddress);
 
           // KIVVVVV
           // insertInternal(cursor->keys[cursor->numKeys], parentDiskAddress, (Node *)newInternalDiskAddress.blockAddress);
-          insertInternal(tempKeyList[cursor->numKeys], parentDiskAddress, (BPNode *)newInternalDiskAddress.blockAddress);
+          //void insertInternal(int key, Address parentStorageAddress, Address newLeafStorageAddress) {
+          insertInternal(tempKeyList[cursor->numKeys], newParentStorageAddress, newInternalStorageAddress);
         }
       }
     }
@@ -389,13 +387,14 @@ class BPlusTree {
 
       // If not, we need to find the parent of this parent to get our siblings.
       // Pass in lower bound key of our child to search for it.
-      BPNode *parentDiskAddress = findParent((BPNode *)rootAddress, cursorDiskAddress, cursor->keys[0]);
+      //BPNode *parentDiskAddress = findParent((BPNode *)rootAddress, cursorDiskAddress, cursor->keys[0]);
       int leftSibling, rightSibling;
 
       // Load parent into main memory.
       //Address parentAddress{parentDiskAddress, 0};
       Address parentAddress;
-      parentAddress.blockAddress = parentDiskAddress;
+      //parentAddress.blockAddress = parentDiskAddress;
+      parentAddress.blockAddress = nullptr;
       parentAddress.offset = 0;
       BPNode *parent = (BPNode *)index->loadFromDisk(parentAddress, nodeSize);
 
@@ -452,7 +451,8 @@ class BPlusTree {
           // Save parent to disk.
           //Address parentAddress{parentDiskAddress, 0};
           Address parentAddress;
-          parentAddress.blockAddress = parentDiskAddress;
+          //parentAddress.blockAddress = parentDiskAddress;
+          parentAddress.blockAddress = nullptr;
           parentAddress.offset = 0;
           index->saveToDisk(parent, nodeSize, parentAddress);
 
@@ -503,7 +503,8 @@ class BPlusTree {
           // Save parent to disk.
           //Address parentAddress{parentDiskAddress, 0};
           Address parentAddress;
-          parentAddress.blockAddress = parentDiskAddress;
+          //parentAddress.blockAddress = parentDiskAddress;
+          parentAddress.blockAddress = nullptr;
           parentAddress.offset = 0;
           index->saveToDisk(parent, nodeSize, parentAddress);
 
@@ -556,7 +557,7 @@ class BPlusTree {
 
         // Delete current node (cursor)
         // We need to update the parent in order to fully remove the current node.
-        removeInternal(parent->keys[leftSibling], (BPNode *)parentDiskAddress, (BPNode *)cursorDiskAddress);
+        //removeInternal(parent->keys[leftSibling], (BPNode *)parentDiskAddress, (BPNode *)cursorDiskAddress);
       }
       // If left sibling doesn't exist, try to merge with right sibling.
       else if (rightSibling <= parent->numKeys)
@@ -597,83 +598,93 @@ class BPlusTree {
         // Delete right node.
         // We need to update the parent in order to fully remove the right node.
         void *rightNodeAddress = parent->pointers[rightSibling].blockAddress;
-        removeInternal(parent->keys[rightSibling - 1], (BPNode *)parentDiskAddress, (BPNode *)rightNodeAddress);
+        //removeInternal(parent->keys[rightSibling - 1], (BPNode *)parentDiskAddress, (BPNode *)rightNodeAddress);
       }
     }
 
     // Finds the direct parent of a node in the B+ Tree.
     // Takes in root and a node to find parent for, returns parent's disk address.
-    BPNode *findParent(BPNode *cursorDiskAddress, BPNode *childDiskAddress, int lowerBoundKey){
+    Address findParent(int lowerBoundKey, Address rootStorageAddress, Address childStorageAddress){
       // Load in cursor into main memory, starting from root.
       //Address cursorAddress{cursorDiskAddress, 0};
-      Address cursorAddress;
-      cursorAddress.blockAddress = cursorDiskAddress;
-      cursorAddress.offset = 0;
-      BPNode *cursor = (BPNode *)index->loadFromDisk(cursorAddress, nodeSize);
+      //Address cursorAddress;
+      //cursorAddress.blockAddress = cursorDiskAddress;
+      //cursorAddress.offset = 0;
+      //BPNode* cursor = (BPNode*) index->loadFromDisk(cursorAddress, nodeSize);
+      BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress;
+      BPNode* parent = (BPNode*) cursor;
+
+      Address nullAddress;
+      nullAddress.blockAddress = nullptr;
+      nullAddress.offset = 0;
+
+      
 
       // If the root cursor passed in is a leaf node, there is no children, therefore no parent.
-      if (cursor->isLeaf)
-      {
-        return nullptr;
+      if (cursor->isLeaf == true) {
+        return nullAddress;
       }
 
       // Maintain parentDiskAddress
-      BPNode *parentDiskAddress = cursorDiskAddress;
-
+      //BPNode* parentDiskAddress = cursorDiskAddress;
+      
       // While not leaf, keep following the nodes to correct key.
-      while (cursor->isLeaf == false)
-      {
+      while (cursor->isLeaf == false) {
         // Check through all pointers of the node to find match.
-        for (int i = 0; i < cursor->numKeys + 1; i++)
-        {
-          if (cursor->pointers[i].blockAddress == childDiskAddress)
-          {
-            return parentDiskAddress;
+        for (int i = 0; i < cursor->numKeys + 1; i++) {
+          //Check if the child belongs to this object
+          if (cursor->pointers[i].blockAddress == childStorageAddress.blockAddress) {
+            Address parentStorageAddress;
+            parentStorageAddress.blockAddress = parent;
+            parentStorageAddress.offset = 0;
+
+            return parentStorageAddress;
           }
         }
 
-        for (int i = 0; i < cursor->numKeys; i++)
-        {
+        //If search all keys in this node liao still cannot find then travese down.
+        for (int i = 0; i < cursor->numKeys; i++) {
           // If key is lesser than current key, go to the left pointer's node.
-          if (lowerBoundKey < cursor->keys[i])
-          {
+          if (lowerBoundKey < cursor->keys[i]) {
             // Load node in from disk to main memory.
-            BPNode *mainMemoryNode = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
-
+            //BPNode *mainMemoryNode = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
+            
             // Update parent address.
-            parentDiskAddress = (BPNode *)cursor->pointers[i].blockAddress;
+            //parentStorageAddress.blockAddress = cursorStorageAddress.blockAddress;
+            parent = cursor;
 
             // Move to new node in main memory.
-            cursor = (BPNode *)mainMemoryNode;
+            cursor = (BPNode*) cursor->pointers[i].blockAddress;
             break;
           }
 
           // Else if key larger than all keys in the node, go to last pointer's node (rightmost).
-          if (i == cursor->numKeys - 1)
-          {
+          if (i == cursor->numKeys - 1) {
             // Load node in from disk to main memory.
-            BPNode *mainMemoryNode = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize);
+            //BPNode *mainMemoryNode = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize);
 
             // Update parent address.
-            parentDiskAddress = (BPNode *)cursor->pointers[i + 1].blockAddress;
+            //parentDiskAddress = (BPNode *)cursor->pointers[i + 1].blockAddress;
+            parent = cursor;
 
             // Move to new node in main memory.
-            cursor = (BPNode *)mainMemoryNode;
+            //cursor = (BPNode *)mainMemoryNode;
+            cursor = (BPNode*) cursor->pointers[i + 1].blockAddress;
             break;
           }
         }
       }
 
       // If we reach here, means cannot find already.
-      return nullptr;
+      return nullAddress;
     }
 
   public:
     // Constructor, takes in block size to determine max keys/pointers in a node.
-    BPlusTree(size_t blockSize, Storage *disk, Storage *index){
+    BPlusTree(size_t blockSize, Storage* disk, Storage* index){
       // Get size left for keys and pointers in a node after accounting for node's isLeaf and numKeys attributes.
-      //size_t nodeBufferSize = blockSize - sizeof(bool) - sizeof(int);
-      size_t nodeBufferSize = blockSize;
+      size_t nodeBufferSize = blockSize - sizeof(bool) - sizeof(int);
+      //size_t nodeBufferSize = blockSize;
 
       // Set max keys available in a node. Each key is a int, each pointer is a struct of {void *blockAddress, short int offset}.
       // Therefore, each key is 4 bytes. Each pointer is around 16(8 + 2 + 6?) bytes.
@@ -685,19 +696,18 @@ class BPlusTree {
       // Try to fit as many pointer key pairs as possible into the node block.
       // int for key
       // address for ptr
-      while (sum + sizeof(Address) + sizeof(int) <= nodeBufferSize)
-      {
+      while (sum + sizeof(Address) + sizeof(int) <= nodeBufferSize) {
         sum += (sizeof(Address) + sizeof(int));
         maxKeys += 1;
       }
 
-      if (maxKeys == 0)
-      {
+      if (maxKeys == 0) {
         throw std::overflow_error("Error: Keys and pointers too large to fit into a node!");
       }
 
       // Initialize root to NULL
-      rootAddress = nullptr;
+      rootStorageAddress.blockAddress = nullptr;
+      rootStorageAddress.offset = 0;
       root = nullptr;
 
       // Set node size to be equal to block size.
@@ -826,24 +836,27 @@ class BPlusTree {
     }
 
     // Inserts a record into the B+ Tree.
-    void insert(Address address, int key){
+    void insert(Address recordaddress, int key){
+      BPNode* root = (BPNode*) rootStorageAddress.blockAddress;
       // If no root exists, create a new B+ Tree root.
-      cout << "Inserting record " << key << " - " << static_cast<void*>(address.blockAddress) << " + " << address.offset << " = " << static_cast<void*>(address.blockAddress) + address.offset << endl;
-      if (rootAddress == nullptr) {
-        cout << "No root exists for " << key << " - " << static_cast<void*>(address.blockAddress) << " + " << address.offset << " = " << static_cast<void*>(address.blockAddress) + address.offset << endl;
+      cout << "Inserting record " << key << " - " << static_cast<void*>(recordaddress.blockAddress) << " + " << recordaddress.offset << " = " << static_cast<void*>(recordaddress.blockAddress) + recordaddress.offset << endl;
+      if (root == nullptr) {
+        cout << "No root exists for " << key << " - " << static_cast<void*>(recordaddress.blockAddress) << " + " << recordaddress.offset << " = " << static_cast<void*>(recordaddress.blockAddress) + recordaddress.offset << endl;
         
         // Create a new linked list (for duplicates) at the key.
+        /*
         cout << "Create LLNode to handle duplicates: " << maxKeys << endl;
         BPNode* LLNode = new BPNode(maxKeys);
         LLNode->keys[0] = key;
         LLNode->isLeaf = false; // So we will never search it
         LLNode->numKeys = 1;
         LLNode->pointers[0] = address; // The disk address of the key just inserted
+        */
 
         // Allocate LLNode and root address
-        cout << "Writing LLNode - " << static_cast<void*>(LLNode) << " + " << nodeSize << " = " << static_cast<void*>(LLNode) + nodeSize << endl;
-        Address LLNodeAddress = index->saveToDisk((void*) LLNode, nodeSize);
-        cout << "Wrote LLNode - " << static_cast<void*>(LLNodeAddress.blockAddress) << " + " << LLNodeAddress.offset << " = " << static_cast<void*>(LLNodeAddress.blockAddress) + LLNodeAddress.offset << endl;
+        //cout << "Writing LLNode - " << static_cast<void*>(LLNode) << " + " << nodeSize << " = " << static_cast<void*>(LLNode) + nodeSize << endl;
+        //Address LLNodeAddress = index->saveToDisk((void*) LLNode, nodeSize);
+        //cout << "Wrote LLNode - " << static_cast<void*>(LLNodeAddress.blockAddress) << " + " << LLNodeAddress.offset << " = " << static_cast<void*>(LLNodeAddress.blockAddress) + LLNodeAddress.offset << endl;
 
         // Create new node in main memory, set it to root, and add the key and values to it.
         cout << "Creating new BPNode of size " << maxKeys << endl;
@@ -851,84 +864,106 @@ class BPlusTree {
         root->keys[0] = key;
         root->isLeaf = true; // It is both the root and a leaf.
         root->numKeys = 1;
-        root->pointers[0] = LLNodeAddress; // Add record's disk address to pointer.
-        cout << "LLNodeAddress: " << static_cast<void*>(LLNodeAddress.blockAddress) << endl;
+        root->pointers[0] = recordaddress; // Add record's disk address to pointer.
+        //cout << "LLNodeAddress: " << static_cast<void*>(LLNodeAddress.blockAddress) << endl;
         cout << "Created new root BPNode at " << static_cast<void*>(root) << endl;
 
         // Write the root node into disk and track of root node's disk address.
-        cout << "Writing root BPNode to disk" << endl;
-        rootAddress = index->saveToDisk(root, nodeSize).blockAddress;
-        cout << "Wrote root BPNode to disk " << static_cast<void*>(rootAddress) << endl;
+        //cout << "Writing root BPNode to disk" << endl;
+        //rootAddress = index->saveToDisk(root, nodeSize).blockAddress;
+        //cout << "Wrote root BPNode to disk " << static_cast<void*>(rootAddress) << endl;
+        rootStorageAddress.blockAddress = root;
+        rootStorageAddress.offset = 0;
       } else { // Else if root exists already, traverse the nodes to find the proper place to insert the key.
-        cout << "Root exists for key " << key << " - " << static_cast<void*>(address.blockAddress) << " + " << address.offset << " = " << static_cast<void*>(address.blockAddress) + address.offset << endl;
+        if(key == 3332) { 
+          cout << "TEST" << endl; 
+        }
+        cout << "Root exists for key " << key << " - " << static_cast<void*>(recordaddress.blockAddress) << " + " << recordaddress.offset << " = " << static_cast<void*>(recordaddress.blockAddress) + recordaddress.offset << endl;
         BPNode* cursor = root;
-        BPNode* parent;                          // Keep track of the parent as we go deeper into the tree in case we need to update it.
-        void* parentDiskAddress = rootAddress; // Keep track of parent's disk address as well so we can update parent in disk.
-        void* cursorDiskAddress = rootAddress; // Store current node's disk address in case we need to update it in disk.
+        BPNode* parent = nullptr;                          // Keep track of the parent as we go deeper into the tree in case we need to update it.
+        Address parentDiskAddress; // Keep track of parent's disk address as well so we can update parent in disk.
+        parentDiskAddress.blockAddress = nullptr;
+        parentDiskAddress.offset = 0;
+        Address cursorDiskAddress; // Store current node's disk address in case we need to update it in disk.
+        cursorDiskAddress.blockAddress = root;
+        cursorDiskAddress.offset = 0;
 
+        cout << "address: " << static_cast<void*>(recordaddress.blockAddress) << " + " << recordaddress.offset << endl;
         cout << "Cursor: " << static_cast<void*>(cursor) << endl;
         cout << "Parent: " << static_cast<void*>(parent) << endl;
-        cout << "parentDiskAddress: " << static_cast<void*>(parentDiskAddress) << endl;
-        cout << "cursorDiskAddress: " << static_cast<void*>(cursorDiskAddress) << endl;
+        //cout << "parentDiskAddress: " << static_cast<void*>(parentDiskAddress) << endl;
+        //cout << "cursorDiskAddress: " << static_cast<void*>(cursorDiskAddress) << endl;
 
-        cout << "Started going to leaf node." << endl;
+        int level = 0;
+        cout << "Started going to leaf node" << endl;
         while (cursor->isLeaf == false) { // While not leaf, keep following the nodes to correct key.
           // Set the parent of the node (in case we need to assign new child later), and its disk address.
           cout << "Parent was: " << static_cast<void*>(parent) << endl;
-          cout << "Parentdiskadd was: " << static_cast<void*>(parentDiskAddress) << endl;
+          //cout << "Parentdiskadd was: " << static_cast<void*>(parentDiskAddress) << endl;
 
           parent = cursor;
-          parentDiskAddress = cursorDiskAddress;
+          //parentDiskAddress = cursorDiskAddress;
+          parentDiskAddress.blockAddress = parent;
 
           cout << "Parent: " << static_cast<void*>(parent) << endl;
-          cout << "Parentdiskadd: " << static_cast<void*>(parentDiskAddress) << endl;
+          //cout << "Parentdiskadd: " << static_cast<void*>(parentDiskAddress) << endl;
           cout << "Cursor: " << static_cast<void*>(cursor) << endl;
-          cout << "Cursordiskadd: " << static_cast<void*>(cursorDiskAddress) << endl;
+          //cout << "Cursordiskadd: " << static_cast<void*>(cursorDiskAddress) << endl;
 
           // Check through all keys of the node to find key and pointer to follow downwards.
+          cout << "Checking thru all keys of node and determine left or right" << endl;
           for (int i = 0; i < cursor->numKeys; i++) {
             // If key is lesser than current key, go to the left pointer's node.
-            cout << "Checking thru all keys of node: " << i << " < " << cursor->numKeys << endl;
+            cout << "Level: " << level << " - Leaf: " << cursor->isLeaf << " Checking thru all keys of node: " << i << " < " << cursor->numKeys << endl;
+
+            cout << "Level: " << level << " - Key: " << key << " < " << cursor->keys[i] << " :cursor-keys[ " << i << " ] " << endl;
             if (key < cursor->keys[i]) {
-              cout << "key: " << key << " < " << cursor->keys[i] << " :cursor-keys[ " << i << " ] " << endl;
+              cout << "key " << key << " lesser than " << cursor->keys[i] << endl;
 
               // Load node in from disk to main memory.
-              cout << "Loading BPNode into mainMemoryNode: " << static_cast<void*>(cursor->pointers[i].blockAddress) << " : " << cursor->pointers[i].offset << " - " << nodeSize << endl;
-              BPNode* mainMemoryNode = (BPNode*) index->loadFromDisk(cursor->pointers[i], nodeSize);
-              cout << "BPNode: " << mainMemoryNode->keys[0] << endl;
+              //cout << "Loading BPNode into mainMemoryNode: " << static_cast<void*>(cursor->pointers[i].blockAddress) << " : " << cursor->pointers[i].offset << " - " << nodeSize << endl;
+              //BPNode* mainMemoryNode = (BPNode*) index->loadFromDisk(cursor->pointers[i], nodeSize);
+              //cout << "BPNode: " << mainMemoryNode->keys[0] << endl;
 
               // Update cursorDiskAddress to maintain address in disk if we need to update nodes.
-              cout << "Cursordiskadd was: " << static_cast<void*>(cursorDiskAddress) << endl;
-              cursorDiskAddress = cursor->pointers[i].blockAddress;
-              cout << "Cursordiskadd: " << static_cast<void*>(cursorDiskAddress) << endl;
+              //cout << "Cursordiskadd was: " << static_cast<void*>(cursorDiskAddress) << endl;
+              //cursorDiskAddress = cursor->pointers[i].blockAddress;
+              //cout << "Cursordiskadd: " << static_cast<void*>(cursorDiskAddress) << endl;
 
               // Move to new node in main memory.
               cout << "Cursor was: " << static_cast<void*>(cursor) << endl;
-              cursor = mainMemoryNode;
+              //cursor = mainMemoryNode;
+              cursor = (BPNode*) cursor->pointers[i].blockAddress;
+              cursorDiskAddress.blockAddress = cursor;
               cout << "Cursor: " << static_cast<void*>(cursor) << endl;
               break;
             }
             
+            cout << "Checking if larger than all other keys: " << i << " == " << cursor->numKeys - 1 << endl;
             if (i == cursor->numKeys - 1) { // Else if key larger than all keys in the node, go to last pointer's node (rightmost).
-              cout << "Larger than all other keys in node going to last: " << i << " - " << cursor->numKeys - 1 << endl;
+              cout << "Larger than all other keys in node going to last: " << i << " == " << cursor->numKeys - 1 << endl;
 
               // Load node in from disk to main memory.
-              cout << "Loading BPNode into mainMemoryNode: " << static_cast<void*>(cursor->pointers[i].blockAddress) << " : " << cursor->pointers[i].offset << " - " << nodeSize << endl;
-              BPNode* mainMemoryNode = (BPNode*) index->loadFromDisk(cursor->pointers[i + 1], nodeSize);
-              cout << "BPNode: " << mainMemoryNode->keys[0] << endl;
+              //cout << "Loading BPNode into mainMemoryNode: " << static_cast<void*>(cursor->pointers[i + 1].blockAddress) << " : " << cursor->pointers[i + 1].offset << " - " << nodeSize << endl;
+              //BPNode* mainMemoryNode = (BPNode*) index->loadFromDisk(cursor->pointers[i + 1], nodeSize);
+              //cout << "BPNode: " << mainMemoryNode->keys[0] << endl;
 
               // Update diskAddress to maintain address in disk if we need to update nodes.
-              cout << "Cursordiskadd was: " << static_cast<void*>(cursorDiskAddress) << endl;
-              cursorDiskAddress = cursor->pointers[i + 1].blockAddress;
-              cout << "Cursordiskadd: " << static_cast<void*>(cursorDiskAddress) << endl;
+              //cout << "Cursordiskadd was: " << static_cast<void*>(cursorDiskAddress) << endl;
+              //cursorDiskAddress = cursor->pointers[i + 1].blockAddress;
+              //cout << "Cursordiskadd: " << static_cast<void*>(cursorDiskAddress) << endl;
 
               // Move to new node in main memory.
               cout << "Cursor was: " << static_cast<void*>(cursor) << endl;
-              cursor = mainMemoryNode;
+              //cursor = mainMemoryNode;
+              cursor = (BPNode*) cursor->pointers[i + 1].blockAddress;
+              cursorDiskAddress.blockAddress = cursor;
               cout << "Cursor: " << static_cast<void*>(cursor) << endl;
               break;
             }
           }
+
+          level++;
         }
 
         cout << "Reached leaf node" << endl;
@@ -948,8 +983,9 @@ class BPlusTree {
           if (cursor->keys[i] == key) {
             // If it's a duplicate, linked list already exists. Insert into linked list.
             // Insert and update the linked list head.
-            cout << "Inserting to LL " << static_cast<void*>(cursor->pointers[i].blockAddress) << " - " << static_cast<void*>(address.blockAddress) << " - " << key << endl;
-            cursor->pointers[i] = insertLL(cursor->pointers[i], address, key);
+            //cout << "Inserting to LL " << static_cast<void*>(cursor->pointers[i].blockAddress) << " - " << static_cast<void*>(address.blockAddress) << " - " << key << endl;
+            //cursor->pointers[i] = insertLL(cursor->pointers[i], address, key);
+            cout << "Duplicate: " << cursor->keys[i] << endl;
           } else {
             // Update the last pointer to point to the previous last pointer's node. Aka maintain cursor -> Y linked list.
             cout << "cursor->numKeys: " << cursor->numKeys << endl;
@@ -959,7 +995,7 @@ class BPlusTree {
             // Now i represents the index we want to put our key in. We need to shift all keys in the node back to fit it in.
             // Swap from number of keys + 1 (empty key) backwards, moving our last key back and so on. We also need to swap pointers.
             for (int j = cursor->numKeys; j > i; j--) {
-              cout << "Shifting right: " << j << " > " << i << endl;
+              cout << "Shifting right: " << j << " > " << j - 1 << endl;
               // Just do a simple bubble swap from the back to preserve index order.
               cursor->keys[j] = cursor->keys[j - 1];
               cursor->pointers[j] = cursor->pointers[j - 1];
@@ -971,21 +1007,25 @@ class BPlusTree {
 
             // We need to make a new linked list to store our record.
             // Create a new linked list (for duplicates) at the key.
-            cout << "Create LLNode to handle duplicates: " << maxKeys << endl;
-            BPNode* LLNode2 = new BPNode(maxKeys);
-            LLNode2->keys[0] = key;
-            LLNode2->isLeaf = false; // So we will never search it
-            LLNode2->numKeys = 1;
-            LLNode2->pointers[0] = address; // The disk address of the key just inserted
+            //cout << "Create LLNode to handle duplicates: " << maxKeys << endl;
+            /*
+            BPNode* LLNode = new BPNode(maxKeys);
+            LLNode->keys[0] = key;
+            LLNode->isLeaf = false; // So we will never search it
+            LLNode->numKeys = 1;
+            LLNode->pointers[0] = address; // The disk address of the key just inserted
+            */
 
             // Allocate LLNode into disk. Here?
-            cout << "Writing LLNode - " << static_cast<void*>(LLNode2) << " + " << nodeSize << " = " << static_cast<void*>(LLNode2) + nodeSize << endl;
-            Address LLNodeAddress = index->saveToDisk(LLNode2, nodeSize);
-            cout << "Wrote LLNode - " << static_cast<void*>(LLNodeAddress.blockAddress) << " + " << LLNodeAddress.offset << " = " << static_cast<void*>(LLNodeAddress.blockAddress) + LLNodeAddress.offset << endl;
+            //cout << "Writing LLNode - " << static_cast<void*>(LLNode) << " + " << nodeSize << " = " << static_cast<void*>(LLNode) + nodeSize << endl;
+            //Address LLNodeAddress = index->saveToDisk(LLNode, nodeSize);
+            //cout << "Wrote LLNode - " << static_cast<void*>(LLNodeAddress.blockAddress) << " + " << LLNodeAddress.offset << " = " << static_cast<void*>(LLNodeAddress.blockAddress) + LLNodeAddress.offset << endl;
 
             // Update variables
-            cursor->pointers[i] = LLNodeAddress;
+            cursor->pointers[i] = recordaddress;
+            cout << "cursor->numKeys was: " << cursor->numKeys << endl;
             cursor->numKeys++;
+            cout << "cursor->numKeys: " << cursor->numKeys << endl;
       
             // Update leaf node pointer link to next node
             cursor->pointers[cursor->numKeys] = next;
@@ -994,20 +1034,22 @@ class BPlusTree {
             // cursorDiskAddress is the address of node in disk, cursor is the address of node in main memory.
             // In this case, we count read/writes as 1/O only (Assume block remains in main memory).
             //Address cursorOriginalAddress{cursorDiskAddress, 0};
-            Address cursorOriginalAddress;
-            cursorOriginalAddress.blockAddress = cursorDiskAddress;
-            cursorOriginalAddress.offset = 0;
-            index->saveToDisk(cursor, nodeSize, cursorOriginalAddress);
+            //Address cursorOriginalAddress;
+            //cursorOriginalAddress.blockAddress = cursorDiskAddress;
+            //cursorOriginalAddress.offset = 0;
+
+            //cout << "Writing cursorOriginalAddress: " << static_cast<void*>(cursorOriginalAddress.blockAddress) << " -> " << static_cast<void*>(cursorOriginalAddress.blockAddress) + cursorOriginalAddress.offset + nodeSize << " - " << cursorOriginalAddress.offset << " - " << nodeSize << endl;
+            //Address test = index->saveToDisk(cursor, nodeSize, cursorOriginalAddress);
+            //cout << "Wrote cursorOriginalAddress: " << static_cast<void*>(test.blockAddress) << " -> " << static_cast<void*>(test.blockAddress) + test.offset + nodeSize << " - " << test.offset << " - " << nodeSize << endl;
           }
-        }
-        // Overflow: If there's no space to insert new key, we have to split this node into two and update the parent if required.
-        else
-        {
+        } else { // Overflow: If there's no space to insert new key, we have to split this node into two and update the parent if required.
           // Create a new leaf node to put half the keys and pointers in.
-          BPNode *newLeaf = new BPNode(maxKeys);
+          cout << "Creating BPNode of size " << maxKeys << endl;
+          BPNode* newLeaf = new BPNode(maxKeys);
+          cout << "Created new BPNode at " << static_cast<void*>(newLeaf) << endl;
 
           // Copy all current keys and pointers (including new key to insert) to a temporary list.
-          float tempKeyList[maxKeys + 1];
+          int tempKeyList[maxKeys + 1];
 
           // We only need to store pointers corresponding to records (ignore those that points to other nodes).
           // Those that point to other nodes can be manipulated by themselves without this array later.
@@ -1015,17 +1057,16 @@ class BPlusTree {
           Address next = cursor->pointers[cursor->numKeys];
 
           // Copy all keys and pointers to the temporary lists.
-          int i = 0;
-          for (i = 0; i < maxKeys; i++)
-          {
+          for (int i = 0; i < maxKeys; i++) {
             tempKeyList[i] = cursor->keys[i];
             tempPointerList[i] = cursor->pointers[i];
+            cout << "Copied " << i << " of " << maxKeys << " : " << cursor->keys[i] << " - " << static_cast<void*>(cursor->pointers[i].blockAddress) << " + " << cursor->pointers[i].offset << endl;
           }
 
           // Insert the new key into the temp key list, making sure that it remains sorted. Here, we find where to insert it.
-          i = 0;
-          while (key > tempKeyList[i] && i < maxKeys)
-          {
+          int i = 0;
+          while (key > tempKeyList[i] && i < maxKeys) {
+            cout << "Search left to right: " << key << " > " << tempKeyList[i] << " & " << i << " < " << maxKeys << endl;
             i++;
           }
 
@@ -1034,124 +1075,164 @@ class BPlusTree {
           // i is where our key goes in. Check if it's already there (duplicate).
           // make sure it is not the last one 
           if (i < cursor->numKeys) {
-            if (cursor->keys[i] == key)
-            {
+            if (cursor->keys[i] == key) {
               // If it's a duplicate, linked list already exists. Insert into linked list.
               // Insert and update the linked list head.
-              cursor->pointers[i] = insertLL(cursor->pointers[i], address, key);
-              return;
+              //cursor->pointers[i] = insertLL(cursor->pointers[i], address, key);
+              //return;
+              cout << "Duplicate Overflow: " << cursor->keys[i] << endl;
             } 
           }
 
           // Else no duplicate, insert new key.
           // The key should be inserted at index i in the temporary lists. Move all elements back.
-          for (int j = maxKeys; j > i; j--)
-          {
+          for (int j = maxKeys; j > i; j--) {
             // Bubble swap all elements (keys and pointers) backwards by one index.
+            cout << "Shifting right: " << j << " > " << j - 1 << endl;
             tempKeyList[j] = tempKeyList[j - 1];
             tempPointerList[j] = tempPointerList[j - 1];
           }
 
           // Insert the new key and pointer into the temporary lists.
+          cout << "Inserting key to node " << i << " : " << key << endl;
           tempKeyList[i] = key;
 
           // The address to insert will be a new linked list node.
           // Create a new linked list (for duplicates) at the key.
+          /*
           BPNode *LLNode = new BPNode(maxKeys);
           LLNode->keys[0] = key;
           LLNode->isLeaf = false; // So we will never search it
           LLNode->numKeys = 1;
           LLNode->pointers[0] = address; // The disk address of the key just inserted
+          */
 
           // Allocate LLNode into disk.
-          Address LLNodeAddress = index->saveToDisk((void *)LLNode, nodeSize);
-          tempPointerList[i] = LLNodeAddress;
+          //Address LLNodeAddress = index->saveToDisk((void *)LLNode, nodeSize);
+          cout << "Inserting address to node " << i << " : " << static_cast<void*>(recordaddress.blockAddress) << " + " << recordaddress.offset << endl;
+          tempPointerList[i] = recordaddress;
           
+          cout << "newLeaf->isLeaf was: " << newLeaf->isLeaf << endl;
           newLeaf->isLeaf = true; // New node is a leaf node.
+          cout << "newLeaf->isLeaf: " << newLeaf->isLeaf << endl;
 
           // Split the two new nodes into two. ⌊(n+1)/2⌋ keys for left, n+1 - ⌊(n+1)/2⌋ (aka remaining) keys for right.
-          cursor->numKeys = (maxKeys + 1) / 2;
-          newLeaf->numKeys = (maxKeys + 1) - ((maxKeys + 1) / 2);
+          //cursor->numKeys = (maxKeys + 1) / 2;
+          //newLeaf->numKeys = (maxKeys + 1) - ((maxKeys + 1) / 2);
+          cout << "Calc the new keys after split" << endl;
+          cout << "cursor->numKeys was: " << cursor->numKeys << endl;
+          cout << "newLeaf->numKeys was: " << newLeaf->numKeys << endl;
+          cursor->numKeys = ceil((maxKeys + 1) / 2.0);
+          newLeaf->numKeys = floor((maxKeys + 1) / 2.0);
+          cout << "cursor->numKeys: " << cursor->numKeys << endl;
+          cout << "newLeaf->numKeys: " << newLeaf->numKeys << endl;
 
           // Set the last pointer of the new leaf node to point to the previous last pointer of the existing node (cursor).
           // Essentially newLeaf -> Y, where Y is some other leaf node pointer wherein cursor -> Y previously.
           // We use maxKeys since cursor was previously full, so last pointer's index is maxKeys.
+          cout << "newLeaf->pointers[" << newLeaf->numKeys << "] was: " << static_cast<void*>(next.blockAddress) << " + " << next.offset << endl;
           newLeaf->pointers[newLeaf->numKeys] = next;
+          cout << "newLeaf->pointers[" << newLeaf->numKeys << "] : " << static_cast<void*>(next.blockAddress) << " + " << next.offset << endl;
 
           // Now we need to deal with the rest of the keys and pointers.
           // Note that since we are at a leaf node, pointers point directly to records on disk.
 
           // Add in keys and pointers in both the existing node, and the new leaf node.
           // First, the existing node (cursor).
-          for (i = 0; i < cursor->numKeys; i++)
-          {
+          cout << "Adding the keyptr back to the nodes" << endl;
+          for (i = 0; i < cursor->numKeys; i++) {
+            cout << "Adding to cursor " << i << " : " << tempKeyList[i] << " - " << tempPointerList[i].blockAddress << " + " << tempPointerList[i].offset << endl;
             cursor->keys[i] = tempKeyList[i];
             cursor->pointers[i] = tempPointerList[i];
           }
 
           // Then, the new leaf node. Note we keep track of the i index, since we are using the remaining keys and pointers.
-          for (int j = 0; j < newLeaf->numKeys; i++, j++)
-          {
+          for (int j = 0; j < newLeaf->numKeys; i++, j++) {
+            cout << "Adding to newLeaf " << j << " : " << tempKeyList[i] << " - " << tempPointerList[i].blockAddress << " + " << tempPointerList[i].offset << endl;
             newLeaf->keys[j] = tempKeyList[i];
             newLeaf->pointers[j] = tempPointerList[i];
           }
 
           // Now that we have finished updating the two new leaf nodes, we need to write them to disk.
-          Address newLeafAddress = index->saveToDisk(newLeaf, nodeSize);
+          //cout << "Writing new leaf BPNode to disk" << endl;
+          //Address newLeafAddress = index->saveToDisk(newLeaf, nodeSize);
+          Address newLeafStorageAddress;
+          newLeafStorageAddress.blockAddress = newLeaf;
+          newLeafStorageAddress.offset = 0;
+          //cout << "Wrote new leaf BPNode to disk " << static_cast<void*>(newLeafAddress.blockAddress) << " -> " << static_cast<void*>(newLeafAddress.blockAddress) + newLeafAddress.offset << " - " << newLeafAddress.offset << endl;
 
           // Now to set the cursors' pointer to the disk address of the leaf and save it in place
-          cursor->pointers[cursor->numKeys] = newLeafAddress;
+          cout << "cursor->pointers[" << cursor->numKeys << "] was: " << static_cast<void*>(cursor->pointers[cursor->numKeys].blockAddress) << " + " << cursor->pointers[cursor->numKeys].offset << endl;
+          cursor->pointers[cursor->numKeys] = newLeafStorageAddress;
+          cout << "cursor->pointers[" << cursor->numKeys << "] : " << static_cast<void*>(newLeafStorageAddress.blockAddress) << " + " << newLeafStorageAddress.offset << endl;
 
           // wipe out the wrong pointers and keys from cursor
           for (int i = cursor->numKeys; i < maxKeys; i++) {
-            cursor->keys[i] = float();
+            cout << "wiping cursor->keys[" << i << "] was : " << cursor->keys[i] << endl;
+            cursor->keys[i] = 0;
+            cout << "wiping cursor->keys[" << i << "] : " << cursor->keys[i] << endl;
           }
+
           for (int i = cursor->numKeys+1; i < maxKeys + 1; i++) {
             //Address nullAddress{nullptr, 0};
             Address nullAddress;
             nullAddress.blockAddress = nullptr;
             nullAddress.offset = 0;
+
+            cout << "wiping cursor->pointers[" << i << "] was : " << cursor->pointers[i].blockAddress << " + " << cursor->pointers[i].offset << endl;
             cursor->pointers[i] = nullAddress;
+            cout << "wiping cursor->pointers[" << i << "] : " << cursor->pointers[i].blockAddress << " + " << cursor->pointers[i].offset << endl;
           }
 
           //Address cursorOriginalAddress{cursorDiskAddress, 0};
-          Address cursorOriginalAddress;
-          cursorOriginalAddress.blockAddress = cursorDiskAddress;
-          cursorOriginalAddress.offset = 0;
-          index->saveToDisk(cursor, nodeSize, cursorOriginalAddress);
+          //Rewrite back the cursor with the divided childs
+          //Address cursorOriginalAddress;
+          //cursorOriginalAddress.blockAddress = cursorDiskAddress;
+          //cursorOriginalAddress.offset = 0;
+
+          //cout << "Writing cursorOriginalAddress: " << static_cast<void*>(cursorOriginalAddress.blockAddress) << " -> " << static_cast<void*>(cursorOriginalAddress.blockAddress) + cursorOriginalAddress.offset + nodeSize << " - " << cursorOriginalAddress.offset << " - " << nodeSize << endl;
+          //Address test = index->saveToDisk(cursor, nodeSize, cursorOriginalAddress);
+          //cout << "Wrote cursorOriginalAddress: " << static_cast<void*>(test.blockAddress) << " -> " << static_cast<void*>(test.blockAddress) + test.offset + nodeSize << " - " << test.offset << " - " << nodeSize << endl;
 
           // If we are at root (aka root == leaf), then we need to make a new parent root.
-          if (cursor == root)
-          {
-            BPNode *newRoot = new BPNode(maxKeys);
+          if (cursor == root) {
+            cout << "Creating new root BPNode of size " << maxKeys << endl;
+            BPNode* newRoot = new BPNode(maxKeys);
 
             // We need to set the new root's key to be the left bound of the right child.
+            cout << "Setting new root key[0] to " << newLeaf->keys[0] << endl;
             newRoot->keys[0] = newLeaf->keys[0];
 
             // Point the new root's children as the existing node and the new node.
             //Address cursorDisk{cursorDiskAddress, 0};
-            Address cursorDisk;
-            cursorDisk.blockAddress = cursorDiskAddress;
-            cursorDisk.offset = 0;
+            //Address cursorDisk;
+            //cursorDisk.blockAddress = cursorDiskAddress;
+            //cursorDisk.blockAddress = cursor;
+            //cursorDisk.offset = 0;
 
-            newRoot->pointers[0] = cursorDisk;
-            newRoot->pointers[1] = newLeafAddress;
+            cout << "newRoot->pointers[0] " << cursorDiskAddress.blockAddress << " + " << cursorDiskAddress.offset << endl;
+            cout << "newRoot->pointers[1] " << newLeafStorageAddress.blockAddress << " + " << newLeafStorageAddress.offset << endl;
+            newRoot->pointers[0] = cursorDiskAddress;
+            newRoot->pointers[1] = newLeafStorageAddress;
 
             // Update new root's variables.
             newRoot->isLeaf = false;
             newRoot->numKeys = 1;
 
             // Write the new root node to disk and update the root disk address stored in B+ Tree.
-            Address newRootAddress = index->saveToDisk(newRoot, nodeSize);
+            //cout << "Writing new root BPNode to disk" << endl;
+            //rootAddress = index->saveToDisk(newRoot, nodeSize).blockAddress;
+            //cout << "Wrote root BPNode to disk " << static_cast<void*>(rootAddress) << endl;
 
-            // Update the root address
-            rootAddress = newRootAddress.blockAddress;
+            cout << "root was: " << static_cast<void*>(root) << endl;
             root = newRoot;
-          }
-          // If we are not at the root, we need to insert a new parent in the middle levels of the tree.
-          else
-          {
-            insertInternal(newLeaf->keys[0], (BPNode *)parentDiskAddress, (BPNode *)newLeafAddress.blockAddress);
+            cout << "root: " << static_cast<void*>(root) << endl;
+            
+            rootStorageAddress.blockAddress = root;
+            rootStorageAddress.offset = 0;
+          } else { // If we are not at the root, we need to insert a new parent in the middle levels of the tree.
+            cout << "Need insert parent in middle: " << newLeaf->keys[0] << endl;
+            insertInternal(newLeaf->keys[0], parentDiskAddress, newLeafStorageAddress);
           }
         }
       }

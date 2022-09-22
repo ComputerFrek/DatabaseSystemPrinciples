@@ -161,14 +161,9 @@ class Storage{
       short int curoffset = diskaddress.offset;
 
       cout << "Writing src loc: " << static_cast<void*>(itemaddress) << " -> " << static_cast<void*>(itemaddress) + size << " : " << size << endl;
-      cout << "Writing dst loc: " << static_cast<void*>(curblockptr) << " - " << static_cast<void*>(curblockptr) + curoffset << " -> " << static_cast<void*>(curblockptr) + curoffset + size << " : " << size << " - " << curoffset << endl;
-      try {
-        memcpy(curblockptr + curoffset, itemaddress, size);
-      } catch (exception& e) {
-        cerr << e.what() << endl;
-      }
+      cout << "Writing dst loc: " << static_cast<void*>(curblockptr) << " - " << static_cast<void*>(curblockptr) + curoffset << " -> " << static_cast<void*>(curblockptr) + curoffset + size << " : " << curoffset << " - " << size << endl;
+      memcpy(curblockptr + curoffset, (unsigned char*) itemaddress, size);
       
-
       // Update blocks accessed
       blocksaccessed++;
 
@@ -176,14 +171,21 @@ class Storage{
     }
 
     // Update data in disk if I have already saved it before.
-    Address saveToDisk(void *itemAddress, std::size_t size, Address diskAddress)
-    {
-      std::memcpy((char *)diskAddress.blockAddress + diskAddress.offset, itemAddress, size);
+    Address saveToDisk(void* itemaddress, size_t size, Address diskaddress) {
+      cout << "diskaddress: " << static_cast<void*>(diskaddress.blockAddress) << " - " << diskaddress.offset << endl;
+
+      unsigned char* curblockptr = (unsigned char*) diskaddress.blockAddress;
+      short int curoffset = diskaddress.offset;
+
+      cout << "Writing src loc: " << static_cast<void*>(itemaddress) << " -> " << static_cast<void*>(itemaddress) + size << " : " << size << endl;
+      cout << "Writing dst loc: " << static_cast<void*>(curblockptr) << " - " << static_cast<void*>(curblockptr) + curoffset << " -> " << static_cast<void*>(curblockptr) + curoffset + size << " : " << size << " - " << curoffset << endl;
+      
+      memcpy(curblockptr + curoffset, itemaddress, size);
 
       // Update blocks accessed
       blocksaccessed++;
 
-      return diskAddress;
+      return diskaddress;
     }
 
     size_t getmaxstoragesize() const

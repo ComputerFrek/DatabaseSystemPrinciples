@@ -77,6 +77,9 @@ int main(){
   ifstream inputfile("data.tsv");
   string inputstring;
 
+  vector<Address> datablocks;
+  vector<BPNode*> indexblocks;
+
   while(getline(inputfile, inputstring)){
     if(inputstring.rfind("tconst", 0) == 0){
         continue;
@@ -95,19 +98,23 @@ int main(){
     record.avgRating = stod(inputtoken[1]);
     record.numVotes = stoi(inputtoken[2]);
 
+    /*
     if(inputtoken[0].compare("tt0000007") == 0){
       cout << "Break" << endl;
     }
+    */
 
     cout << "Writing record: " << record.tconst << endl;
+    //Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
     Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
 
     cout << "Inserting record: " << record.tconst << " to bptree " << endl;
     //build the bplustree as we insert records
     tree.insert(tempAddress, record.numVotes);
-
+    
     //logging
-    cout << "Inserted record " << record.tconst << " at block address: " << &tempAddress.blockAddress << " and offset " << &tempAddress.offset << endl;
+    cout << "Inserted record " << record.tconst << " at block address: " << static_cast<void*>(tempAddress.blockAddress) << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << endl;
+    //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
     cout << endl;
     }
 }
