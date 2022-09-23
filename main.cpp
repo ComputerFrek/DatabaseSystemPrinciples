@@ -76,7 +76,7 @@ int main(){
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("data.tsv");
+  ifstream inputfile("datatest.tsv");
   string inputstring;
 
   vector<Address> datablocks;
@@ -112,6 +112,14 @@ int main(){
     cout << "Inserted record " << record.tconst << " at block address: " << static_cast<void*>(tempAddress.blockAddress) << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << endl;
     //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
   
+    cout << "=====================================Experiment 2==========================================" << endl;
+    cout << "Parameter n of the B+ tree    : " << tree.getMaxKeys() << endl;
+    cout << "Number of nodes of the B+ tree: " << tree.getNumNodes() << endl;
+    cout << "Height of the B+ tree         : " << tree.getLevels() << endl;
+    cout << "Root nodes and child nodes :" << endl;
+    tree.display(tree.getRootStorageAddress(), 0);
+    cout << "=====================================Experiment 2 End======================================" << endl;
+
     cout << endl;
   }
 
