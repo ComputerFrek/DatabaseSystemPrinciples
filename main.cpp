@@ -40,10 +40,12 @@ int main(){
   BLOCKSIZE = 200;
 
   // create the stream redirection stuff 
-  streambuf *coutbuf = std::cout.rdbuf(); //save old buffer
+  streambuf* coutbuf = cout.rdbuf(); //save old buffer
 
   // save experiment1 logging
-  ofstream out1("experiment1_" + to_string(BLOCKSIZE) + "B.txt");
+  //ofstream out1("experiment1_" + to_string(BLOCKSIZE) + "B.txt");
+  //cout.rdbuf(out1.rdbuf());           //redirect std::cout to filename.txt!
+  ofstream out1("output_" + to_string(BLOCKSIZE) + "B.txt");
   cout.rdbuf(out1.rdbuf());           //redirect std::cout to filename.txt!
 
   /*
@@ -98,12 +100,6 @@ int main(){
     record.avgRating = stod(inputtoken[1]);
     record.numVotes = stoi(inputtoken[2]);
 
-    /*
-    if(inputtoken[0].compare("tt0000007") == 0){
-      cout << "Break" << endl;
-    }
-    */
-
     cout << "Writing record: " << record.tconst << endl;
     //Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
     Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
@@ -115,6 +111,30 @@ int main(){
     //logging
     cout << "Inserted record " << record.tconst << " at block address: " << static_cast<void*>(tempAddress.blockAddress) << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << endl;
     //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
+  
     cout << endl;
-    }
+  }
+
+  /*
+  =============================================================
+  Experiment 2:
+  Build a B+ tree on the attribute "numVotes" by inserting the records sequentially and report the following statistics:
+    - the parameter n of the B+ tree;
+    - the number of nodes of the B+ tree;
+    - the height of the B+ tree, i.e., the number of levels of the B+ tree;
+    - the content of the root node and its 1st child node;
+  =============================================================
+  */
+  // save experiment2 logging
+  //ofstream out2("experiment2_" + to_string(BLOCKSIZE) + "B.txt");
+  //cout.rdbuf(out2.rdbuf());           //redirect std::cout to filename.txt!
+
+  // call experiment 2
+  cout << "=====================================Experiment 2==========================================" << endl;
+  cout << "Parameter n of the B+ tree    : " << tree.getMaxKeys() << endl;
+  cout << "Number of nodes of the B+ tree: " << tree.getNumNodes() << endl;
+  cout << "Height of the B+ tree         : " << tree.getLevels() << endl;
+  cout << "Root nodes and child nodes :" << endl;
+  tree.display(tree.getRootStorageAddress(), 0);
+  cout << "=====================================Experiment 2 End======================================" << endl;
 }
