@@ -102,14 +102,20 @@ int main(){
 
     cout << "Writing record: " << record.tconst << endl;
     //Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
+    //test
+
+
+
     Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
+
+    //datablocks.push_back(tempAddress);
 
     cout << "Inserting record: " << record.tconst << " to bptree " << endl;
     //build the bplustree as we insert records
     tree.insert(tempAddress, record.numVotes);
     
     //logging
-    cout << "Inserted record " << record.tconst << " at block address: " << static_cast<void*>(tempAddress.blockAddress) << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << endl;
+    cout << "Inserted record " << record.tconst << " at block address: " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset + sizeof(Record) << endl;
     //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
   
     cout << "=====================================Experiment 2==========================================" << endl;
