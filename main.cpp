@@ -37,7 +37,7 @@ int main(){
       std::cout << "Invalid input, input either 1 or 2" <<endl;
     }
   }*/
-  BLOCKSIZE = 500;
+  BLOCKSIZE = 200;
 
   // create the stream redirection stuff 
   streambuf* coutbuf = cout.rdbuf(); //save old buffer
