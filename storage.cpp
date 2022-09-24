@@ -50,17 +50,17 @@ class Storage{
     bool allocateBlock() {
       // Only allocate a new block if we don't exceed maxstoragesize.
       if (blocksavailable != 0) {
-        cout << "blockavailable: " << blocksavailable << endl;
-        cout << "blocksallocated * blocksize: " << blocksallocated * blocksize << " - poolptr + blocksallocated * blocksize: " << static_cast<void*>(poolptr) + (blocksallocated * blocksize) << endl;
-        cout << "blockptr was: " << static_cast<void*>(blockptr) << endl;
+        //cout << "blockavailable: " << blocksavailable << endl;
+        //cout << "blocksallocated * blocksize: " << blocksallocated * blocksize << " - poolptr + blocksallocated * blocksize: " << static_cast<void*>(poolptr) + (blocksallocated * blocksize) << endl;
+        //cout << "blockptr was: " << static_cast<void*>(blockptr) << endl;
         blockptr = poolptr + (blocksallocated * blocksize); // Set current block pointer to new block.
-        cout << "blockptr: " << static_cast<void*>(blockptr) << endl;
+        //cout << "blockptr: " << static_cast<void*>(blockptr) << endl;
 
         blocksallocated++;
         blocksavailable--;
         blocksizeused += blocksize;
         curblocksizeused = 0; // Reset offset to 0.
-        cout << "blocksallocated: " << blocksallocated << " blocksavailable: " << blocksavailable << " blocksizeused: " << blocksizeused << " curblocksizeused: " << curblocksizeused << endl;
+        //cout << "blocksallocated: " << blocksallocated << " blocksavailable: " << blocksavailable << " blocksizeused: " << blocksizeused << " curblocksizeused: " << curblocksizeused << endl;
 
         return true;
       } else {
@@ -77,7 +77,7 @@ class Storage{
       }
 
       // If no current block, or record can't fit into current block, make a new block.
-      cout << "blocksallocated: " << blocksallocated << " curblocksizeused + sizeRequired = " << curblocksizeused + sizeRequired << " > " << blocksize << endl;
+      //cout << "blocksallocated: " << blocksallocated << " curblocksizeused + sizeRequired = " << curblocksizeused + sizeRequired << " > " << blocksize << endl;
       if (blocksallocated == 0 || (curblocksizeused + sizeRequired > blocksize)) {
         bool isSuccessful = allocateBlock();
         if (!isSuccessful) {
@@ -87,21 +87,21 @@ class Storage{
 
       // Update variables
       short int offset = curblocksizeused;
-      cout << "offset: " << offset << endl;
+      //cout << "offset: " << offset << endl;
 
-      cout << "curblocksizeused was: " << curblocksizeused << " + " << sizeRequired << endl;
+      //cout << "curblocksizeused was: " << curblocksizeused << " + " << sizeRequired << endl;
       curblocksizeused += sizeRequired;
-      cout << "curblocksizeused: " << curblocksizeused << endl;
+      //cout << "curblocksizeused: " << curblocksizeused << endl;
 
-      cout << "actualsizeused was: " << actualsizeused << " + " << sizeRequired << endl;
+      //cout << "actualsizeused was: " << actualsizeused << " + " << sizeRequired << endl;
       actualsizeused += sizeRequired;
-      cout << "actualsizeused: " << actualsizeused << endl;
+      //cout << "actualsizeused: " << actualsizeused << endl;
 
       // Return the new memory space to put in the record.
       Address recordAddress;
       recordAddress.blockAddress = blockptr;
       recordAddress.offset = offset;
-      cout << "recordAddress: " << static_cast<void*>(recordAddress.blockAddress) << " - " << recordAddress.offset << endl;
+      //cout << "recordAddress: " << static_cast<void*>(recordAddress.blockAddress) << " - " << recordAddress.offset << endl;
 
       return recordAddress;
     }
@@ -142,8 +142,8 @@ class Storage{
     void* loadFromDisk(Address address, size_t size) {
       void* mainMemoryAddress = operator new(size);
 
-      cout << "Reading src loc: " << static_cast<void*>(address.blockAddress) << " - " << static_cast<void*>(address.blockAddress) + address.offset << " -> " << static_cast<void*>(address.blockAddress) + address.offset + size << " : " << size << " - " << address.offset << endl;
-      cout << "Reading dst loc: " << static_cast<void*>(mainMemoryAddress) << " -> " << static_cast<void*>(mainMemoryAddress) + size << " : " << size << endl;
+      //cout << "Reading src loc: " << static_cast<void*>(address.blockAddress) << " - " << static_cast<void*>(address.blockAddress) + address.offset << " -> " << static_cast<void*>(address.blockAddress) + address.offset + size << " : " << size << " - " << address.offset << endl;
+      //cout << "Reading dst loc: " << static_cast<void*>(mainMemoryAddress) << " -> " << static_cast<void*>(mainMemoryAddress) + size << " : " << size << endl;
       memcpy(mainMemoryAddress, (unsigned char*) address.blockAddress + address.offset, size);
 
       // Update blocks accessed
@@ -155,20 +155,15 @@ class Storage{
     // Saves something into the disk. Returns disk address.
     Address saveToDisk(void* itemaddress, size_t size) {
       Address diskaddress = allocate(size);
-      cout << "diskaddress: " << static_cast<void*>(diskaddress.blockAddress) << " - " << diskaddress.offset << endl;
+      //cout << "diskaddress: " << static_cast<void*>(diskaddress.blockAddress) << " - " << diskaddress.offset << endl;
 
       unsigned char* curblockptr = (unsigned char*) diskaddress.blockAddress;
       short int curoffset = diskaddress.offset;
 
-      cout << "Writing src loc: " << static_cast<void*>(itemaddress) << " -> " << static_cast<void*>(itemaddress) + size << " : " << size << endl;
-      cout << "Writing dst loc: " << static_cast<void*>(curblockptr) << " - " << static_cast<void*>(curblockptr) + curoffset << " -> " << static_cast<void*>(curblockptr) + curoffset + size << " : " << size << " - " << curoffset << endl;
-      try {
-        memcpy(curblockptr + curoffset, itemaddress, size);
-      } catch (exception& e) {
-        cerr << e.what() << endl;
-      }
+      //cout << "Writing src loc: " << static_cast<void*>(itemaddress) << " -> " << static_cast<void*>(itemaddress) + size << " : " << size << endl;
+      //cout << "Writing dst loc: " << static_cast<void*>(curblockptr) << " - " << static_cast<void*>(curblockptr) + curoffset << " -> " << static_cast<void*>(curblockptr) + curoffset + size << " : " << curoffset << " - " << size << endl;
+      memcpy(curblockptr + curoffset, (unsigned char*) itemaddress, size);
       
-
       // Update blocks accessed
       blocksaccessed++;
 
@@ -176,14 +171,21 @@ class Storage{
     }
 
     // Update data in disk if I have already saved it before.
-    Address saveToDisk(void *itemAddress, std::size_t size, Address diskAddress)
-    {
-      std::memcpy((char *)diskAddress.blockAddress + diskAddress.offset, itemAddress, size);
+    Address saveToDisk(void* itemaddress, size_t size, Address diskaddress) {
+      //cout << "diskaddress: " << static_cast<void*>(diskaddress.blockAddress) << " - " << diskaddress.offset << endl;
+
+      unsigned char* curblockptr = (unsigned char*) diskaddress.blockAddress;
+      short int curoffset = diskaddress.offset;
+
+      //cout << "Writing src loc: " << static_cast<void*>(itemaddress) << " -> " << static_cast<void*>(itemaddress) + size << " : " << size << endl;
+      //cout << "Writing dst loc: " << static_cast<void*>(curblockptr) << " - " << static_cast<void*>(curblockptr) + curoffset << " -> " << static_cast<void*>(curblockptr) + curoffset + size << " : " << size << " - " << curoffset << endl;
+      
+      memcpy(curblockptr + curoffset, itemaddress, size);
 
       // Update blocks accessed
       blocksaccessed++;
 
-      return diskAddress;
+      return diskaddress;
     }
 
     size_t getmaxstoragesize() const
