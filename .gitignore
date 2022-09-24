@@ -2,5 +2,5 @@
 .gitignore
 main.exe
 main2.exe
-experiment1_200B.txt
 output_200B.txt
+output_500B.txt

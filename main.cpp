@@ -37,7 +37,7 @@ int main(){
       std::cout << "Invalid input, input either 1 or 2" <<endl;
     }
   }*/
-  BLOCKSIZE = 200;
+  BLOCKSIZE = 500;
 
   // create the stream redirection stuff 
   streambuf* coutbuf = cout.rdbuf(); //save old buffer
@@ -76,7 +76,7 @@ int main(){
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("datatest.tsv");
+  ifstream inputfile("data.tsv");
   string inputstring;
 
   vector<Address> datablocks;
@@ -101,14 +101,7 @@ int main(){
     record.numVotes = stoi(inputtoken[2]);
 
     cout << "Writing record: " << record.tconst << endl;
-    //Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
-    //test
-
-
-
     Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
-
-    //datablocks.push_back(tempAddress);
 
     cout << "Inserting record: " << record.tconst << " to bptree " << endl;
     //build the bplustree as we insert records
@@ -117,14 +110,6 @@ int main(){
     //logging
     cout << "Inserted record " << record.tconst << " at block address: " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset + sizeof(Record) << endl;
     //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
-  
-    cout << "=====================================Experiment 2==========================================" << endl;
-    cout << "Parameter n of the B+ tree    : " << tree.getMaxKeys() << endl;
-    cout << "Number of nodes of the B+ tree: " << tree.getNumNodes() << endl;
-    cout << "Height of the B+ tree         : " << tree.getLevels() << endl;
-    cout << "Root nodes and child nodes :" << endl;
-    tree.display(tree.getRootStorageAddress(), 0);
-    cout << "=====================================Experiment 2 End======================================" << endl;
 
     cout << endl;
   }
