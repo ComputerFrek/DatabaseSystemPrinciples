@@ -2001,15 +2001,17 @@ class BPlusTree {
 
         if (cursor != nullptr){
 
-          //Check Not Leaf Node
+          //WHen its not Leaf Node
           while(!cursor->isLeaf)
           {
+            //Loop through all the keys in current Node
             for (int i = 0; i < cursor->numKeys; i++){
               int key = getCursorKey(cursor,i);
 
-              cout << "Key Value: " << key << endl;
-              cout << "Key getKeysCount(): " << cursor->getKeysCount() << endl;
+              cout << "Accessing Key: " << key << endl;
+              cout << "Total keys in current Node: " << cursor->getKeysCount() << endl;
 
+              //Go Left Ptr if LB < current key
               if (lowerBoundKey < key){
                   cout << " go left "<< endl;
                   cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
@@ -2019,6 +2021,7 @@ class BPlusTree {
                   break;
               }
 
+              //When we reached at last key, we switch to Right Ptr (using i+1) and continue searching 
               if(cursor->getKeysCount()-1 == i){
                 cout << "at last key "<< endl;
                 cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize);
@@ -2029,6 +2032,8 @@ class BPlusTree {
             }
           }
 
+          //This stage: indicated we have reached Leaf Node
+          //Next step: loop through leaf node keys to match target
           cout << "End of isLeaf == False while loop "<< endl;
           //displayNode(cursor);
           cout << "Key getKeysCount(): " << cursor->getKeysCount() << endl;
