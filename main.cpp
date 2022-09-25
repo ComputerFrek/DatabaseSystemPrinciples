@@ -76,7 +76,7 @@ int main(){
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("data.tsv");
+  ifstream inputfile("datatest2.tsv");
   string inputstring;
 
   vector<Address> datablocks;
@@ -129,6 +129,9 @@ int main(){
   //cout.rdbuf(out2.rdbuf());           //redirect std::cout to filename.txt!
 
   // call experiment 2
+
+  cout << "  "<< endl;
+  cout << "  "<< endl;
   cout << "=====================================Experiment 2==========================================" << endl;
   cout << "Parameter n of the B+ tree    : " << tree.getMaxKeys() << endl;
   cout << "Number of nodes of the B+ tree: " << tree.getNumNodes() << endl;
@@ -136,4 +139,17 @@ int main(){
   cout << "Root nodes and child nodes :" << endl;
   tree.display(tree.getRootStorageAddress(), 0);
   cout << "=====================================Experiment 2 End======================================" << endl;
+
+
+  cout << "======= Experiment 3 (SEARCH) =====" << endl;
+  int searchInput = 13;
+  cout << "Searching for Key:" << searchInput << endl;
+
+  tree.search2(searchInput,searchInput);
+  //tree.search(searchInput,searchInput);
+
+  
+
+
+  cout << "======= Experiment 3 END =====" << endl;
 }
