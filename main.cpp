@@ -76,7 +76,7 @@ int main(){
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("data.tsv");
+  ifstream inputfile("datatest.tsv");
   string inputstring;
 
   vector<Address> datablocks;
@@ -136,4 +136,11 @@ int main(){
   cout << "Root nodes and child nodes :" << endl;
   tree.display(tree.getRootStorageAddress(), 0);
   cout << "=====================================Experiment 2 End======================================" << endl;
+
+  cout << " " << endl;
+  int removeNumVotes = 1000;
+
+  cout << "Experiment 4 Deleting >>> " << removeNumVotes << endl;
+  int output4 = tree.remove2(removeNumVotes);
+  cout << "output4: " << output4 << endl;
 }
