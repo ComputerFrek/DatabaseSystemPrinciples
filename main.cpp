@@ -76,6 +76,7 @@ int main(){
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
+  //ifstream inputfile("data.tsv");
   ifstream inputfile("datatest2.tsv");
   string inputstring;
 
@@ -142,13 +143,15 @@ int main(){
 
 
   cout << "======= Experiment 3 (SEARCH) =====" << endl;
-  int searchInput = 13;
+  //int searchInput = 500;
+  int searchInput = 97;
   cout << "Searching for Key:" << searchInput << endl;
 
   tree.search2(searchInput,searchInput);
+  //tree.search2(97,99);
   //tree.search(searchInput,searchInput);
 
-  
+
 
 
   cout << "======= Experiment 3 END =====" << endl;

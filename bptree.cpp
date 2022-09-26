@@ -2014,7 +2014,12 @@ class BPlusTree {
               //Go Left Ptr if LB < current key
               if (lowerBoundKey < key){
                   cout << " go left "<< endl;
-                  cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
+
+                  //test1
+                  // cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
+
+                  //test2
+                  cursor = (BPNode*)cursor->pointers[i].blockAddress;
 
                   printCurrentPointer(cursor,i);
                   //displayNode(cursor);
@@ -2024,12 +2029,20 @@ class BPlusTree {
               //When we reached at last key, we switch to Right Ptr (using i+1) and continue searching 
               if(cursor->getKeysCount()-1 == i){
                 cout << "at last key "<< endl;
-                cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize);
+
+                //test1
+                //cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize); //testing line below
+
+                //test2
+                cursor = (BPNode*)cursor->pointers[i+1].blockAddress;
+
                 displayNode(cursor);
                 printCurrentPointer(cursor,i);
                 break;
               }
             }
+
+            cout << "checking isLeaf: " << cursor->isLeaf << endl;
           }
 
           //This stage: indicated we have reached Leaf Node
@@ -2046,7 +2059,7 @@ class BPlusTree {
               if (key > upperBoundKey)
               {
                 flag = true;
-                cout << "key > upperBoundKey "<< endl;
+                cout << "The End: No key found!"<< endl;
                 break;
               }
               else if(key >= lowerBoundKey && key<= upperBoundKey){
@@ -2109,22 +2122,9 @@ class BPlusTree {
                 break;
               }
             }
-
-            // if (cursor->pointers[cursor->numKeys].blockAddress != nullptr && cursor->keys[i] != upperBoundKey)
-            //   {
-            //     // Set cursor to be next leaf node (load from disk).
-            //     cursor = (BPNode *)index->loadFromDisk(cursor->pointers[cursor->numKeys], nodeSize);
-            //     displayNode(cursor);
-            //   }
-            //   else
-            //   {
-            //     flag = true;
-            //   }
           }
         }
-
         auto m = 0;
-
     }
 
     //Display Key Value from Cursor :WJ
@@ -2146,21 +2146,22 @@ class BPlusTree {
       cout << "numVotes: "<< record->numVotes << endl;
       cout << "====================="<< endl;
 
+      LLNode *LLs = (LLNode *)recordAddress;
+     
+   
+      // int k = countLinkedListNodes(LLs);
+      // cout << "displaying Key's LinkedList"<<endl;
+      // cout << "coming soon...."<<endl;
 
-      cout << "displaying Key's LinkedList"<<endl;
-      cout << "coming soon...."<<endl;
+      // Record *ll1 = (Record *)LLs;
+      // cout << "==== Record Details ===="<< endl;
+      // cout << "tconst: "<< ll1->tconst << endl;
+      // cout << "avgRating: "<< ll1->avgRating << endl;
+      // cout << "numVotes: "<< ll1->numVotes << endl;
+      // cout << "====================="<< endl;
 
-      BPNode *head = (BPNode *)index->loadFromDisk(LLHeadAddress, nodeSize);
       auto m = 0;
 
-      // if(head->isLeaf){
-      //    cout << "numNodes: " << numNodes <<endl;
-      // }
-
-      for (int i = 0; i < head->numKeys; i++){
-        //head->pointers[i].blockAddress
-        auto m = 0;
-      }
     }
 
     //Print Current Cursor's blockAddress :WJ
@@ -2181,4 +2182,36 @@ class BPlusTree {
       auto addr = curPtr.blockAddress + curPtr.offset;
       return addr;
     }
+
+    int countLinkedListNodes(LLNode *head) {
+      LLNode* temp = head;
+      int i = 0;
+      while(temp != NULL)
+      {
+        i++;
+
+        if(temp != nullptr){
+          cout << "valid" << endl;
+        }
+        else{
+          cout << "invalid" << endl;
+          break;
+        }
+        temp = temp->next;
+      }
+      return i;  
+    } 
+
+
+    // int countLinkedListNodes(LLNode* head)
+    // {
+    //     // Base Case
+    //     if (head == NULL || !head->next) {
+    //         return 0;
+    //     }
+    //     // Count this node plus the rest of the list
+    //     else {
+    //         return 1 + countLinkedListNodes(head->next);
+    //     }
+    // }
 };
