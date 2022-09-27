@@ -38,7 +38,7 @@ class Storage{
       // Create pool of blocks.
       this->poolptr = new unsigned char[maxstoragesize];
       
-      cout << "Size: " << this->maxstoragesize << " - blocksize: " << this->blocksize <<" - " << static_cast<void*>(this->poolptr)  << " -> " << static_cast<void*>(this->poolptr) + this->maxstoragesize << endl;
+      //cout << "Size: " << this->maxstoragesize << " - blocksize: " << this->blocksize <<" - " << static_cast<void*>(this->poolptr)  << " -> " << static_cast<void*>(this->poolptr) + this->maxstoragesize << endl;
       /*cout << "Blockptr: " << endl;
       for(int i=0; i <= blocksavailable; i++){
         cout << "Block " << i << " : " << static_cast<void*>(this->poolptr) + (i * 200) << endl;

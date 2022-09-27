@@ -58,7 +58,7 @@ int main(){
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("datatest.tsv");
+  ifstream inputfile("data.tsv");
   string inputstring;
 
   while(getline(inputfile, inputstring)){

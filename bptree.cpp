@@ -1195,10 +1195,10 @@ class BPlusTree {
             prenode = prenode->next;
           }
 
-          cout << static_cast<void*>(node->pointers[i].blockAddress) + node->pointers[i].offset << "|";
+          cout << static_cast<void*>(node->pointers[i].blockAddress) << " + " << node->pointers[i].offset << "|";
           cout << node->keys[i] << "-" << z << "|";
         } else {
-          cout << static_cast<void*>(node->pointers[i].blockAddress) + node->pointers[i].offset << "|";
+          cout << static_cast<void*>(node->pointers[i].blockAddress) << " + " << node->pointers[i].offset << "|";
           cout << node->keys[i] << "|";
         }
       }
@@ -1727,6 +1727,7 @@ class BPlusTree {
           return level;
         }
       }
+      return 0;
     }
 
     Address getRootStorageAddress() { return rootStorageAddress; };
