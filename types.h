@@ -14,9 +14,10 @@ struct Record { //20bytes?
   int numVotes;        // Number of votes of this movie. 4 bytes
 };
 
-struct LLNode {
-  Address dataaddress;
-  LLNode* next;
+class LLNode {
+  public:
+    Address dataaddress;
+    LLNode* next;
 };
 
 #endif
