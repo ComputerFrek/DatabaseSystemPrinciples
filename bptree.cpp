@@ -2044,7 +2044,8 @@ class BPlusTree {
 
           if (getCursorKey(cursor,pos) == target)
           {
-            cout << "The end: Found key at [i+1]=" << pos+1 << ";value=" << cursor->keys[pos+1] << endl;
+            cout << "The end: Found key at [i+1]=" << pos << ";value=" << cursor->keys[pos] << endl;
+            cout << "The end: Found key ptr: " << cursor->pointers[pos].blockAddress << endl;
             found = true;
             break;
           }
@@ -2120,8 +2121,7 @@ class BPlusTree {
     }
 
     void deleteTargetKeyFromNode(BPNode *cursor,int pos){
-      //pos+i == index of Target Key
-      for (int i = pos+1; i < cursor->numKeys; i++)  
+      for (int i = pos; i < cursor->numKeys; i++)  
         {
           cursor->keys[i] = cursor->keys[i + 1];
           cursor->pointers[i] = cursor->pointers[i + 1];
