@@ -57,14 +57,62 @@ public:
     this->_ptrToBlock = nullptr;
   }
 
-  bool isBlockAllocatedSucess(){
+  // Save new data to disk and return the disk address
+  Address saveDataToDisk(void *itemaddress, size_t size){
+    // Current disk address after memory allocated for a new record
+    Address diskAddress = allocateNewRecord(size);
 
+    // Current block pointer and the offset between block address and new record address
+    unsigned char *currentBlockPtr = (unsigned char *)diskAddress.blockAddress;
+    short int currentRecordOffset = diskAddress.offset;
+
+    memcpy(currentBlockPtr + currentRecordOffset, (unsigned char *)itemaddress, size);
+
+    // Update number of blocks has been accessed
+    _numOfBlockAccessed++;
+    return diskAddress;
+  }
+
+  /*// save the data again which has been saved before
+  Address saveToDisk(void *dataAddress, size_t dataSize, Address diskAddress){
+    
+    unsigned char *currentBlockPtr = (unsigned char *)diskAddress.blockAddress;
+    short int currentRecordOffset = diskAddress.offset;
+    memcpy(currentBlockPtr + currentRecordOffset, dataAddress, dataSize);
+
+    // Update number of blocks has been accessed
+    _numOfBlockAccessed++;
+
+    return diskAddress;
+  }*/
+
+  // Give a block address, offset and size, returns the data there.
+  void *retrieveDataFromDisk(Address givenAddress, size_t dataSize){
+    void *memoryAddress = operator new(dataSize);
+    memcpy(memoryAddress, (unsigned char *)givenAddress.blockAddress + givenAddress.offset, dataSize);
+
+    // retrieve successfully, update the block access number
+    _numOfBlockAccessed++;
+
+    return memoryAddress;
+  }
+
+  // Get the total number of block has been allocated
+  int getNumberOfBlockAllocated() const{
+    return _numOfBlockAllocated;
+  };
+
+  // Rest the total number of blocks has been accessed
+  int resetNumberOfBlocksAccessed(){
+    int tempBlocksAccessed = _numOfBlockAccessed;
+    _numOfBlockAccessed = 0;
+    return tempBlocksAccessed;
+  }
+
+  bool isBlockAllocatedSucess(){
     // Before allocate block, check if have avaliable block
     if (_numOfBlockAvailable != 0){
-
       // cout << "The number of block avaliable is : " << _numOfBlockAvailable << endl;
-
-
       // If have avaliable block to store data, then set the curretn pointer to the new block has been allocated 
       _ptrToBlock = _ptrToMemory + (_numOfBlockAllocated * _sizeOfEachBlock); 
 
@@ -82,9 +130,7 @@ public:
       // cout << "The size of current block has been used is: " << _sizeOfCurrentBlockUsed << endl;
 
       return true;
-    }
-    else{
-
+    } else {
       // Display error message if there is no avaliable block
       cout << "Error: No memory left to allocate new block (" << _sizeOfAllBlcokUsed << "/" << _sizeOfMaxDiskStorage << " used)." << '\n';
       return false;
@@ -92,7 +138,6 @@ public:
   }
 
   Address allocateNewRecord(size_t recordSize){  
-
     // If record size more than block size, provide error message and handle exception
     if (recordSize > _sizeOfEachBlock){
       cout << "Error: Th input record size is larger than block size (" << recordSize << " <--> " << _sizeOfEachBlock << ")! Increase the single block size and reallocate" << '\n';
@@ -151,46 +196,7 @@ public:
     };
   }
 
-  // Give a block address, offset and size, returns the data there.
-  void *retrieveDataFromDisk(Address givenAddress, size_t dataSize){
-    void *memoryAddress = operator new(dataSize);
-    memcpy(memoryAddress, (unsigned char *)givenAddress.blockAddress + givenAddress.offset, dataSize);
-
-    // retrieve successfully, update the block access number
-    _numOfBlockAccessed++;
-
-    return memoryAddress;
-  }
-
-  // Save new data to disk and return the disk address
-  Address saveDataToDisk(void *itemaddress, size_t size){
-    // Current disk address after memory allocated for a new record
-    Address diskAddress = allocateNewRecord(size);
-
-    // Current block pointer and the offset between block address and new record address
-    unsigned char *currentBlockPtr = (unsigned char *)diskAddress.blockAddress;
-    short int currentRecordOffset = diskAddress.offset;
-
-    memcpy(currentBlockPtr + currentRecordOffset, (unsigned char *)itemaddress, size);
-
-    // Update number of blocks has been accessed
-    _numOfBlockAccessed++;
-    return diskAddress;
-  }
-
-  // save the data again which has been saved before
-  Address saveToDisk(void *dataAddress, size_t dataSize, Address diskAddress){
-    
-    unsigned char *currentBlockPtr = (unsigned char *)diskAddress.blockAddress;
-    short int currentRecordOffset = diskAddress.offset;
-    memcpy(currentBlockPtr + currentRecordOffset, dataAddress, dataSize);
-
-    // Update number of blocks has been accessed
-    _numOfBlockAccessed++;
-
-    return diskAddress;
-  }
-
+  /*
   // Get the disk maximum size
   size_t get_sizeOfMaxDiskStorage() const{
     return _sizeOfMaxDiskStorage;
@@ -211,10 +217,7 @@ public:
     return _sizeOfAllBlcokUsed;
   }
 
-  // Get the total number of block has been allocated
-  int getNumberOfBlockAllocated() const{
-    return _numOfBlockAllocated;
-  };
+  
 
   // Get the size of all records has been used
   size_t getActualsizeUsed() const{
@@ -225,13 +228,8 @@ public:
   int getNumberOfBlocksAccessed() const{
     return _numOfBlockAccessed;
   }
-
-  // Rest the total number of blocks has been accessed
-  int resetNumberOfBlocksAccessed(){
-    int tempBlocksAccessed = _numOfBlockAccessed;
-    _numOfBlockAccessed = 0;
-    return tempBlocksAccessed;
-  }
+  */
+  
 
   ~DiskStorage(){};
 };

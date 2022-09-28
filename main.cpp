@@ -26,7 +26,7 @@ int main(){
   cout.rdbuf(out1.rdbuf());           //redirect std::cout to filename.txt!
 
   cout << "creating the disk on the stack for records" << endl;
-  Storage disk(500000000, BLOCKSIZE);  // 500MB
+  DiskStorage disk(500000000, BLOCKSIZE);  // 500MB
 
   // Creating the tree 
   BPlusTree tree = BPlusTree(&disk, BLOCKSIZE);
@@ -56,7 +56,7 @@ int main(){
     record.numVotes = stoi(inputtoken[2]);
 
     cout << "Writing record: " << record.tconst << endl;
-    Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
+    Address tempAddress = disk.saveDataToDisk(&record, sizeof(Record));
 
     cout << "Inserting record: " << record.tconst << " to bptree " << endl;
     //build the bplustree as we insert records
@@ -76,8 +76,8 @@ int main(){
   =============================================================
   */
   cout << "==================================== Experiment 1 =========================================" << endl;
-  cout << "Number of blocks : " << disk.getAllocated() << endl;
-  cout << "Size of database : " << ((disk.getAllocated() * BLOCKSIZE) / 1000) << endl;
+  cout << "Number of blocks : " << disk.getNumberOfBlockAllocated() << endl;
+  cout << "Size of database : " << ((disk.getNumberOfBlockAllocated() * BLOCKSIZE) / 1000) << endl;
   cout << "==================================== Experiment 1 End =====================================" << endl;
   cout << endl;
 
@@ -100,7 +100,7 @@ int main(){
   cout << "==================================== Experiment 2 End =====================================" << endl;
   cout << endl;
 
-  disk.resetBlocksAccessed();
+  disk.resetNumberOfBlocksAccessed();
 
   /*
   =============================================================
@@ -119,7 +119,7 @@ int main(){
   tie(iproc, rproc) = tree.search(5,5);
   cout << endl;
   cout << "Number of index nodes processed: " << iproc << endl;
-  cout << "Number of record blocks processed: " << disk.resetBlocksAccessed() << endl;
+  cout << "Number of record blocks processed: " << disk.resetNumberOfBlocksAccessed() << endl;
   cout << "==================================== Experiment 3 End =====================================" << endl;
   cout << endl;
   
@@ -141,7 +141,7 @@ int main(){
   tie(iproc, rproc) = tree.search(1, 40000);
   cout << endl;
   cout << "Number of index nodes processed: " << iproc << endl;
-  cout << "Number of record blocks processed: " << disk.resetBlocksAccessed() << endl;
+  cout << "Number of record blocks processed: " << disk.resetNumberOfBlocksAccessed() << endl;
   cout << "==================================== Experiment 4 End =====================================" << endl;
   cout << endl;
   
