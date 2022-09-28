@@ -138,9 +138,10 @@ int main(){
   cout << "=====================================Experiment 2 End======================================" << endl;
 
   cout << " " << endl;
-  int removeNumVotes = 1000;
+  int removeNumVotes = 7;
 
   cout << "Experiment 4 Deleting >>> " << removeNumVotes << endl;
   int output4 = tree.remove2(removeNumVotes);
   cout << "output4: " << output4 << endl;
+  tree.display(tree.getRootStorageAddress(), 0);
 }
