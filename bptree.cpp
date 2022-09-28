@@ -1486,81 +1486,6 @@ class BPlusTree {
       cout << endl;
     }
 
-    // Prints out a data block and its contents in the disk.
-    void displayBlock(void *blockAddress) {
-      // Load block into memory
-      void *block = operator new(nodeSize);
-      std::memcpy(block, blockAddress, nodeSize);
-
-      unsigned char testBlock[nodeSize];
-      memset(testBlock, '\0', nodeSize);
-
-      // Block is empty.
-      if (memcmp(testBlock, block, nodeSize) == 0)
-      {
-        std::cout << "Empty block!" << '\n';
-        return;
-      }
-
-      unsigned char *blockChar = (unsigned char *)block;
-
-      int i = 0;
-      while (i < nodeSize)
-      {
-        // Load each record
-        void *recordAddress = operator new(sizeof(Record));
-        std::memcpy(recordAddress, blockChar, sizeof(Record));
-
-        Record *record = (Record *)recordAddress;
-
-        std::cout << "[" << record->tconst << "|" << record->avgRating << "|" << record->numVotes << "]  ";
-        blockChar += sizeof(Record);
-        i += sizeof(Record);
-      }
-    }
-
-    // Prints out an entire linked list's records.
-    void displayLL(Address LLHeadAddress) {
-      // Load linked list head into main memory.
-      BPNode *head = (BPNode *)index->loadFromDisk(LLHeadAddress, nodeSize);
-
-      // Print all records in the linked list.
-      for (int i = 0; i < head->numKeys; i++)
-      {
-        // Load the block from disk.
-        // void *blockMainMemoryAddress = operator new(nodeSize);
-        // std::memcpy(blockMainMemoryAddress, head->pointers[i].blockAddress, nodeSize);
-
-        std::cout << "\nData block accessed. Content is -----";
-        displayBlock(head->pointers[i].blockAddress);
-        std::cout << endl;
-
-        Record result = *(Record *)(disk->loadFromDisk(head->pointers[i], sizeof(Record)));
-        std::cout << result.tconst << " | ";
-
-
-      }
-
-      // Print empty slots
-      for (int i = head->numKeys; i < maxKeys; i++)
-      {
-        std::cout << "x | ";
-      }
-      
-      // End of linked list
-      if (head->pointers[head->numKeys].blockAddress == nullptr)
-      {
-        std::cout << "End of linked list" << endl;
-        return;
-      }
-
-      // Move to next node in linked list.
-      if (head->pointers[head->numKeys].blockAddress != nullptr)
-      {
-        displayLL(head->pointers[head->numKeys]);
-      }
-    }
-
     // Remove a range of records from the disk (and B+ Tree).
     // Accepts a key to delete.
     int remove(int key){
@@ -1993,185 +1918,159 @@ class BPlusTree {
 
     int getMaxKeys() { return maxKeys; }
 
-    void search2(int lowerBoundKey, int upperBoundKey){
-        cout << "B+Tree root: " << rootStorageAddress.blockAddress << endl;
-        BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress; //current target in B+Tree
+    void search(int lowerBoundKey, int upperBoundKey) {
+      cout << "B+Tree root: " << rootStorageAddress.blockAddress << endl;
+      BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress; //current target in B+Tree
 
-        cout << "isLeaf: " << cursor->isLeaf << endl; //any non-zero value to bool is true
+      cout << "isLeaf: " << cursor->isLeaf << endl; //any non-zero value to bool is true
 
-        if (cursor != nullptr){
+      if (cursor != nullptr) {
+        //WHen its not Leaf Node
+        while(!cursor->isLeaf) {
+          //Loop through all the keys in current Node
+          for (int i = 0; i < cursor->numKeys; i++){
+            int key = getCursorKey(cursor, i);
 
-          //WHen its not Leaf Node
-          while(!cursor->isLeaf)
-          {
-            //Loop through all the keys in current Node
-            for (int i = 0; i < cursor->numKeys; i++){
-              int key = getCursorKey(cursor,i);
+            cout << "Accessing Key: " << key << endl;
+            cout << "Total keys in current Node: " << cursor->getKeysCount() << endl;
 
-              cout << "Accessing Key: " << key << endl;
-              cout << "Total keys in current Node: " << cursor->getKeysCount() << endl;
-
-              //Go Left Ptr if LB < current key
-              if (lowerBoundKey < key){
-                  cout << " go left "<< endl;
-
-                  //test1
-                  // cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
-
-                  //test2
-                  cursor = (BPNode*)cursor->pointers[i].blockAddress;
-
-                  printCurrentPointer(cursor,i);
-                  //displayNode(cursor);
-                  break;
-              }
-
-              //When we reached at last key, we switch to Right Ptr (using i+1) and continue searching 
-              if(cursor->getKeysCount()-1 == i){
-                cout << "at last key "<< endl;
+            //Go Left Ptr if LB < current key
+            if (lowerBoundKey < key){
+                cout << " go left "<< endl;
 
                 //test1
-                //cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize); //testing line below
+                // cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
 
                 //test2
-                cursor = (BPNode*)cursor->pointers[i+1].blockAddress;
+                cursor = (BPNode*)cursor->pointers[i].blockAddress;
 
-                displayNode(cursor);
-                printCurrentPointer(cursor,i);
+                printCurrentPointer(cursor, i);
+                //displayNode(cursor);
                 break;
-              }
             }
 
-            cout << "checking isLeaf: " << cursor->isLeaf << endl;
+            //When we reached at last key, we switch to Right Ptr (using i+1) and continue searching 
+            if(cursor->getKeysCount()-1 == i){
+              cout << "at last key "<< endl;
+
+              //test1
+              //cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize); //testing line below
+
+              //test2
+              cursor = (BPNode*) cursor->pointers[i + 1].blockAddress;
+
+              displayNode(cursor);
+              printCurrentPointer(cursor, i);
+              break;
+            }
           }
 
-          //This stage: indicated we have reached Leaf Node
-          //Next step: loop through leaf node keys to match target
-          cout << "End of isLeaf == False while loop "<< endl;
-          //displayNode(cursor);
-          cout << "Key getKeysCount(): " << cursor->getKeysCount() << endl;
+          cout << "checking isLeaf: " << cursor->isLeaf << endl;
+        }
 
-          bool flag = false;
-          while(!flag){
-            int i;
-            for (i = 0; i < cursor->getKeysCount(); i++){
-              int key = getCursorKey(cursor,i);
-              if (key > upperBoundKey)
-              {
-                flag = true;
-                cout << "The End: No key found!"<< endl;
-                break;
-              }
-              else if(key >= lowerBoundKey && key<= upperBoundKey){
-                cout << "Found key(low,upper) at [i]="<< i << endl;
+        //This stage: indicated we have reached Leaf Node
+        //Next step: loop through leaf node keys to match target
+        cout << "End of isLeaf == False while loop "<< endl;
+        //displayNode(cursor);
+        cout << "Key getKeysCount(): " << cursor->getKeysCount() << endl;
+
+        bool flag = false;
+        while(!flag){
+          int i;
+          for (i = 0; i < cursor->getKeysCount(); i++){
+            int key = getCursorKey(cursor,i);
+            if (key > upperBoundKey)
+            {
+              flag = true;
+              cout << "The End: No key found!"<< endl;
+              break;
+            }
+            else if(key >= lowerBoundKey && key<= upperBoundKey){
+              cout << "Found key(low,upper) at [i]="<< i << endl;
+            
+              printCurrentPointer(cursor, i);
+              printCurrentPointerWithOffset(cursor, i); //This pointing to the Key 
+
+              //auto mg = getNewPtr(cursor,i);
+
+              // Address testOffSet;
+              // testOffSet.blockAddress = cursor->pointers[i].blockAddress + cursor->pointers[i].offset;
+              // testOffSet.offset = 0;
+
+              // BPNode *test = (BPNode *)index->loadFromDisk(testOffSet, nodeSize);
+
+              //displayBlock(blockAddr);  //24/9/22 Last debug here 2:16am
+              // displayBlock(cursor->pointers[i].blockAddress);
+
+              //25.9.22 1:47pm testing displayLL
+              //displayLL(cursor->pointers[i]);
+
+              Address llnodeaddress;
+              llnodeaddress.blockAddress = cursor->pointers[i].blockAddress;
+              llnodeaddress.offset = cursor->pointers[i].offset;
+              cout << "Record blockAddr: "<< llnodeaddress.blockAddress << endl;
+
+              //moved into displayLL2()
+              // void *recordAddress = operator new(sizeof(Record));
+              // std::memcpy(recordAddress, testA.blockAddress, sizeof(Record));
+
+              // Record *record = (Record *)recordAddress;
+              // cout << "======="<< endl;
+              // cout << "tconst: "<< record->tconst << endl;
+              // cout << "avgRating: "<< record->avgRating << endl;
+              // cout << "numVotes: "<< record->numVotes << endl;
+              // cout << "======="<< endl;
+              //end
+
+              displayLL(llnodeaddress);
+              //displayLL2(cursor->pointers[i]);  //i: upperBoundKey's Index from Node
               
-                printCurrentPointer(cursor,i);
-                printCurrentPointerWithOffset(cursor,i); //This pointing to the Key 
-
-                //auto mg = getNewPtr(cursor,i);
-
-
-                // Address testOffSet;
-                // testOffSet.blockAddress = cursor->pointers[i].blockAddress + cursor->pointers[i].offset;
-                // testOffSet.offset = 0;
-
-                // BPNode *test = (BPNode *)index->loadFromDisk(testOffSet, nodeSize);
-
-
-                
-                //displayBlock(blockAddr);  //24/9/22 Last debug here 2:16am
-                // displayBlock(cursor->pointers[i].blockAddress);
-
-                //25.9.22 1:47pm testing displayLL
-                //displayLL(cursor->pointers[i]);
-
-                Address testA;
-
-                //test1: raw
-                // testA.blockAddress = cursor->pointers[i].blockAddress;
-                // testA.offset = cursor->pointers[i].offset;
-
-                //test2: blockAddress + offset (tested > OK)
-                testA.blockAddress = cursor->pointers[i].blockAddress + cursor->pointers[i].offset;
-                testA.offset = 0;
-                cout << "Record blockAddr: "<< testA.blockAddress << endl;
-
-                //moved into displayLL2()
-                // void *recordAddress = operator new(sizeof(Record));
-                // std::memcpy(recordAddress, testA.blockAddress, sizeof(Record));
-
-                // Record *record = (Record *)recordAddress;
-                // cout << "======="<< endl;
-                // cout << "tconst: "<< record->tconst << endl;
-                // cout << "avgRating: "<< record->avgRating << endl;
-                // cout << "numVotes: "<< record->numVotes << endl;
-                // cout << "======="<< endl;
-                //end
-
-
-                displayLL2(testA);
-                //displayLL2(cursor->pointers[i]);  //i: upperBoundKey's Index from Node
-                
-
-                //test we take with OffSet Addr, and get the Block details
+              //test we take with OffSet Addr, and get the Block details
+              displayNode(cursor);
               
-
-                displayNode(cursor);
-                
-                flag = true;
-                break;
-              }
+              flag = true;
+              break;
             }
           }
         }
-        auto m = 0;
+      }
+      auto m = 0;
     }
 
     //Display Key Value from Cursor :WJ
-    int getCursorKey(BPNode *cursor,int i) { 
+    int getCursorKey(BPNode* cursor, int i) { 
       return cursor->keys[i]; 
     }
 
     //refactor displayLL2 :WJ (pending 24.9.22)
-    void displayLL2(Address LLHeadAddress){
+    void displayLL(Address LLHeadAddress){
       cout << "entering displayLL2()....."<<endl;
 
-      void *recordAddress = operator new(sizeof(Record));
-      std::memcpy(recordAddress, LLHeadAddress.blockAddress, sizeof(Record));
+      LLNode* cursor = (LLNode*) LLHeadAddress.blockAddress + LLHeadAddress.offset;
 
-      Record *record = (Record *)recordAddress;
-      cout << "==== Record Details ===="<< endl;
-      cout << "tconst: "<< record->tconst << endl;
-      cout << "avgRating: "<< record->avgRating << endl;
-      cout << "numVotes: "<< record->numVotes << endl;
-      cout << "====================="<< endl;
+      while(cursor->next != nullptr){
+        void* recordAddress = operator new(sizeof(Record));
+        memcpy(recordAddress, LLHeadAddress.blockAddress, sizeof(Record));
 
-      LLNode *LLs = (LLNode *)recordAddress;
-     
-   
-      // int k = countLinkedListNodes(LLs);
-      // cout << "displaying Key's LinkedList"<<endl;
-      // cout << "coming soon...."<<endl;
+        Record* currecord = (Record*) recordAddress;
+        cout << "==== Record Details ===="<< endl;
+        cout << "tconst: "<< currecord->tconst << endl;
+        cout << "avgRating: "<< currecord->avgRating << endl;
+        cout << "numVotes: "<< currecord->numVotes << endl;
+        cout << "========================"<< endl;
 
-      // Record *ll1 = (Record *)LLs;
-      // cout << "==== Record Details ===="<< endl;
-      // cout << "tconst: "<< ll1->tconst << endl;
-      // cout << "avgRating: "<< ll1->avgRating << endl;
-      // cout << "numVotes: "<< ll1->numVotes << endl;
-      // cout << "====================="<< endl;
-
-      auto m = 0;
-
+        cursor = cursor->next;
+      }
     }
 
     //Print Current Cursor's blockAddress :WJ
-    void printCurrentPointer (BPNode *cursor,int i){
+    void printCurrentPointer (BPNode* cursor, int i){
       auto blockAddress = cursor->pointers[i].blockAddress;
       cout << "printCurrentPointer: "<< blockAddress << endl;
     }
 
     //Print Current Cursor's blockAddress with Offset :WJ
-    void printCurrentPointerWithOffset (BPNode *cursor,int i){
+    void printCurrentPointerWithOffset (BPNode* cursor , int i){
       auto curPtr = cursor->pointers[i];
       auto addr = curPtr.blockAddress + curPtr.offset;
       cout << "printCurrentPointerWithOffset: "<< addr << endl;

@@ -147,7 +147,7 @@ int main(){
   int searchInput = 97;
   cout << "Searching for Key:" << searchInput << endl;
 
-  tree.search2(searchInput,searchInput);
+  tree.search(searchInput,searchInput);
   //tree.search2(97,99);
   //tree.search(searchInput,searchInput);
 
