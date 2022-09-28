@@ -10,8 +10,6 @@
 
 using namespace std;
 
-bool myNullPtr = false;
-
 // A node in the B+ Tree.
 class BPNode{
   public:
@@ -26,7 +24,6 @@ class BPNode{
       pointers = new Address[maxKeys + 1];
 
       for (int i = 0; i < maxKeys + 1; i++) {
-        //Address nullAddress {(void *)myNullPtr, 0};
         Address nullAddress;
         nullAddress.blockAddress = nullptr;
         nullAddress.offset = 0;
@@ -756,7 +753,7 @@ class BPlusTree {
 
   public:
     // Constructor, takes in block size to determine max keys/pointers in a node.
-    BPlusTree(size_t blockSize){
+    BPlusTree(Storage* disk, size_t blockSize){
       // Get size left for keys and pointers in a node after accounting for node's isLeaf and numKeys attributes.
       size_t nodeBufferSize = blockSize - sizeof(bool) - sizeof(int);
       //size_t nodeBufferSize = blockSize;
@@ -791,118 +788,8 @@ class BPlusTree {
       // Initialize initial variables
       levels = 0;
       numNodes = 0;
-    }
 
-    // Search for keys corresponding to a range in the B+ Tree given a lower and upper bound. Returns a list of matching Records.
-    void search(int lowerBoundKey, int upperBoundKey) {
-      // Tree is empty.
-      if (rootAddress == nullptr)
-      {
-        throw std::logic_error("Tree is empty!");
-      }
-      // Else iterate through root node and follow the keys to find the correct key.
-      else
-      {
-        // Load in root from disk.
-        //Address rootDiskAddress{rootAddress, 0};
-        Address rootDiskAddress;
-        rootDiskAddress.blockAddress = rootAddress;
-        rootDiskAddress.offset = 0;
-        root = (BPNode *)index->loadFromDisk(rootDiskAddress, nodeSize);
-
-        // for displaying to output file
-        std::cout << "Index node accessed. Content is -----";
-        displayNode(root);
-
-        BPNode *cursor = root;
-
-        bool found = false;
-
-        // While we haven't hit a leaf node, and haven't found a range.
-        while (cursor->isLeaf == false)
-        {
-          // Iterate through each key in the current node. We need to load nodes from the disk whenever we want to traverse to another node.
-          for (int i = 0; i < cursor->numKeys; i++)
-          {
-            // If lowerBoundKey is lesser than current key, go to the left pointer's node to continue searching.
-            if (lowerBoundKey < cursor->keys[i])
-            {
-              // Load node from disk to main memory.
-              cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
-
-              // for displaying to output file
-              std::cout << "Index node accessed. Content is -----";
-              displayNode(cursor);
-
-              break;
-            }
-            // If we reached the end of all keys in this node (larger than all), then go to the right pointer's node to continue searching.
-            if (i == cursor->numKeys - 1)
-            {
-              // Load node from disk to main memory.
-              // Set cursor to the child node, now loaded in main memory.
-              cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize);
-
-              // for displaying to output file
-              std::cout << "Index node accessed. Content is -----";
-              displayNode(cursor);
-              break;
-            }
-          }
-        }
-
-        // When we reach here, we have hit a leaf node corresponding to the lowerBoundKey.
-        // Again, search each of the leaf node's keys to find a match.
-        // vector<Record> results;
-        // unordered_map<void *, void *> loadedBlocks; // Maintain a reference to all loaded blocks in main memory.
-
-        // Keep searching whole range until we find a key that is out of range.
-        bool stop = false;
-
-        while (stop == false)
-        {
-          int i;
-          for (i = 0; i < cursor->numKeys; i++)
-          {
-            // Found a key within range, now we need to iterate through the entire range until the upperBoundKey.
-            if (cursor->keys[i] > upperBoundKey)
-            {
-              stop = true;
-              break;
-            }
-            if (cursor->keys[i] >= lowerBoundKey && cursor->keys[i] <= upperBoundKey)
-            {
-              // for displaying to output file
-              std::cout << "Index node (LLNode) accessed. Content is -----";
-              displayNode(cursor);
-
-              // Add new line for each leaf node's linked list printout.
-              std::cout << endl;
-              std::cout << "LLNode: tconst for average rating: " << cursor->keys[i] << " > ";          
-
-              // Access the linked list node and print records.
-              displayLL(cursor->pointers[i]);
-            }
-          }
-
-          // On the last pointer, check if last key is max, if it is, stop. Also stop if it is already equal to the max
-          if (cursor->pointers[cursor->numKeys].blockAddress != nullptr && cursor->keys[i] != upperBoundKey)
-          {
-            // Set cursor to be next leaf node (load from disk).
-            cursor = (BPNode *)index->loadFromDisk(cursor->pointers[cursor->numKeys], nodeSize);
-
-            // for displaying to output file
-            std::cout << "Index node accessed. Content is -----";
-            displayNode(cursor);
-
-          }
-          else
-          {
-            stop = true;
-          }
-        }
-      }
-      return;
+      this->disk = disk;
     }
 
     // Inserts a record into the B+ Tree.
@@ -1155,72 +1042,102 @@ class BPlusTree {
       }
     }
 
-    // Prints out the B+ Tree in the console.
-    void display(Address rootStorageAddress, int level) {
-      BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress;
+    tuple<int,int> search(int lowerBoundKey, int upperBoundKey) {
+      //cout << "B+Tree root: " << rootStorageAddress.blockAddress << endl;
+      BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress; //current target in B+Tree
+      int displaycount = 0;
+      int indexblockproc = 0;
+      int recordblockproc = 0;
+      int totalrecordfound = 0;
+      float totalavgrating = 0.0;
 
-      // If tree exists, display all nodes.
       if (cursor != nullptr) {
-        cout << "level " << level << ": ";
-        for (int i = 0; i < level; i++) { cout << "  "; }
-
-        displayNode(cursor);
-
-        if (cursor->isLeaf != true) {
-          for (int i = 0; i < cursor->numKeys + 1; i++) {
-            // Load node in from disk to main memory.
-            //BPNode *mainMemoryNode = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
-            Address cursorStorageAddress;
-            cursorStorageAddress.blockAddress = cursor->pointers[i].blockAddress;
-            cursorStorageAddress.offset = 0;
-
-            display(cursorStorageAddress, level + 1);
-          }
-        }
-      }
-    }
-
-    // Prints out a specific node and its contents in the B+ Tree.
-    void displayNode(BPNode* node) {
-      // Print out all contents in the node as such |pointer|key|pointer|
-      int i = 0;
-      cout << node << " - |";
-      for (int i = 0; i < node->numKeys; i++) {
-        if(node->isLeaf == true){
-          int z = 0;
-          int curkey = node->keys[i];
-
-          Address llnodeaddress;
-          llnodeaddress.blockAddress = node->pointers[i].blockAddress;
-          llnodeaddress.offset = node->pointers[i].offset;
-
-          LLNode* prenode = (LLNode*) llnodeaddress.blockAddress + llnodeaddress.offset;
-          while(prenode->next != nullptr){
-            z++;
-            prenode = prenode->next;
+        //WHen its not Leaf Node
+        //cout << "isLeaf: " << cursor->isLeaf << endl; //any non-zero value to bool is true
+        while(!cursor->isLeaf) {
+          //Loop through all the keys in current Node
+          if(displaycount < 5) {
+            cout << "Index block: ";
+            displayNode(cursor);
+            displaycount++;
           }
 
-          cout << static_cast<void*>(node->pointers[i].blockAddress) << " + " << node->pointers[i].offset << "|";
-          cout << node->keys[i] << "-" << z << "|";
-        } else {
-          cout << static_cast<void*>(node->pointers[i].blockAddress) << " + " << node->pointers[i].offset << "|";
-          cout << node->keys[i] << "|";
-        }
-      }
+          for (int i = 0; i < cursor->numKeys; i++){
+            int key = getCursorKey(cursor, i);
+            //cout << "Accessing " << i << " Key: " << key << endl;
+            //cout << "Total keys in current Node: " << cursor->getKeysCount() << endl;
 
-      // Print last filled pointer
-      if (node->pointers[node->numKeys].blockAddress == nullptr) {
-        cout << "null|";
+            if (lowerBoundKey < key){
+                cursor = (BPNode*) cursor->pointers[i].blockAddress;
+                break;
+            }
+
+            //When we reached at last key, we switch to Right Ptr (using i+1) and continue searching 
+            if(cursor->getKeysCount() - 1 == i){
+              cursor = (BPNode*) cursor->pointers[i + 1].blockAddress;
+              break;
+            }
+          }
+
+          //cout << "isLeaf: " << cursor->isLeaf << endl; //any non-zero value to bool is true
+          indexblockproc++;
+        }
+
+        //This stage: indicated we have reached Leaf Node
+        //Next step: loop through leaf node keys to match target
+        //cout << "End of isLeaf == False while loop "<< endl;
+        //displayNode(cursor);
+        //cout << "Key getKeysCount(): " << cursor->getKeysCount() << endl;
+
+        displaycount = 0;
+      
+        bool flag = false;
+        while(!flag){
+          if(displaycount < 5) {
+            cout << "Index block: ";
+            displayNode(cursor);
+            displaycount++;
+          }
+
+          int i;
+          for (i = 0; i < cursor->getKeysCount(); i++){
+            int key = getCursorKey(cursor,i);
+            if (key > upperBoundKey) {
+              flag = true;
+              cout << "Avg of AvgRating: " << (totalavgrating / totalrecordfound) << endl;
+              cout << "Searching completed."<< endl;
+              break;
+            }
+            
+            if (key >= lowerBoundKey && key <= upperBoundKey){
+              float avgrating = 0.0;
+              int recordfound = 0;
+              //cout << "Found key: " << key << " between " << lowerBoundKey << " & " << upperBoundKey << endl;
+
+              Address llnodeaddress;
+              llnodeaddress.blockAddress = cursor->pointers[i].blockAddress;
+              llnodeaddress.offset = cursor->pointers[i].offset;
+
+              tie(recordfound, avgrating) = displayLL(llnodeaddress);
+              totalavgrating += avgrating;
+              totalrecordfound += recordfound;
+              recordblockproc += recordfound;
+            }
+          }
+
+          //cout << "cursor->pointers[cursor->numKeys].blockAddress: " << cursor->pointers[cursor->numKeys].blockAddress << endl;
+          if(cursor->pointers[cursor->numKeys].blockAddress != nullptr && cursor->keys[i] != upperBoundKey){
+            cursor = (BPNode*) cursor->pointers[cursor->numKeys].blockAddress;
+            indexblockproc++;
+          } else {
+            flag = true;
+          }
+        }
       } else {
-        cout << node->pointers[node->numKeys].blockAddress << "|";
+        cout << "No tree created!" << endl;
       }
 
-      for (int i = node->numKeys; i < maxKeys; i++) {
-        cout << "x|";      // Remaining empty keys
-        cout << "null|";   // Remaining empty pointers
-      }
-
-      cout << endl;
+      return make_tuple(indexblockproc, recordblockproc);
     }
 
     // Remove a range of records from the disk (and B+ Tree).
@@ -1617,26 +1534,123 @@ class BPlusTree {
       }
     }
 
+    // Prints out the B+ Tree in the console.
+    void display(Address rootStorageAddress, int level) {
+      BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress;
+
+      // If tree exists, display all nodes.
+      if (cursor != nullptr) {
+        cout << "level " << level << ": ";
+        for (int i = 0; i < level; i++) { cout << "  "; }
+
+        displayNode(cursor);
+
+        if (cursor->isLeaf != true) {
+          for (int i = 0; i < cursor->numKeys + 1; i++) {
+            // Load node in from disk to main memory.
+            //BPNode *mainMemoryNode = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
+            Address cursorStorageAddress;
+            cursorStorageAddress.blockAddress = cursor->pointers[i].blockAddress;
+            cursorStorageAddress.offset = 0;
+
+            display(cursorStorageAddress, level + 1);
+          }
+        }
+      }
+    }
+
+    // Prints out a specific node and its contents in the B+ Tree.
+    void displayNode(BPNode* node) {
+      // Print out all contents in the node as such |pointer|key|pointer|
+      int i = 0;
+      cout << node << " - |";
+      for (int i = 0; i < node->numKeys; i++) {
+        if(node->isLeaf == true){
+          int z = 0;
+          int curkey = node->keys[i];
+
+          Address llnodeaddress;
+          llnodeaddress.blockAddress = node->pointers[i].blockAddress;
+          llnodeaddress.offset = node->pointers[i].offset;
+
+          LLNode* prenode = (LLNode*) llnodeaddress.blockAddress + llnodeaddress.offset;
+          z++;
+          while(prenode->next != nullptr){
+            z++;
+            prenode = prenode->next;
+          }
+
+          cout << static_cast<void*>(node->pointers[i].blockAddress) << " + " << node->pointers[i].offset << "|";
+          cout << node->keys[i] << "-" << z << "|";
+        } else {
+          cout << static_cast<void*>(node->pointers[i].blockAddress) << " + " << node->pointers[i].offset << "|";
+          cout << node->keys[i] << "|";
+        }
+      }
+
+      // Print last filled pointer
+      if (node->pointers[node->numKeys].blockAddress == nullptr) {
+        cout << "null|";
+      } else {
+        cout << node->pointers[node->numKeys].blockAddress << "|";
+      }
+
+      for (int i = node->numKeys; i < maxKeys; i++) {
+        cout << "x|";      // Remaining empty keys
+        cout << "null|";   // Remaining empty pointers
+      }
+
+      cout << endl;
+    }
+
+    //refactor displayLL2 :WJ (pending 24.9.22)
+    tuple<int, float> displayLL(Address LLHeadAddress){
+      float totalavgrating = 0.0;
+      int totalrecords = 0;
+      LLNode* cursor = (LLNode*) LLHeadAddress.blockAddress + LLHeadAddress.offset;
+
+      /*
+      Address recordAddress;
+      recordAddress.blockAddress = cursor->dataaddress.blockAddress;
+      recordAddress.offset = cursor->dataaddress.offset;
+
+      Record* currecord = (Record*) disk->loadFromDisk(recordAddress, sizeof(Record));
+      totalavgrating += currecord->avgRating;
+      totalrecords++;
+      cout << currecord->tconst << "  " << currecord->avgRating << "  " << currecord->numVotes << endl;
+      */
+
+      while(cursor->next != nullptr){
+        Address recordAddress;
+        recordAddress.blockAddress = cursor->dataaddress.blockAddress;
+        recordAddress.offset = cursor->dataaddress.offset;
+
+        Record* currecord = (Record*) disk->loadFromDisk(recordAddress, sizeof(Record));
+        totalavgrating += currecord->avgRating;
+        totalrecords++;
+        cout << currecord->tconst << "  " << currecord->avgRating << "  " << currecord->numVotes << endl;
+        cursor = cursor->next;
+      }
+
+      return make_tuple(totalrecords, totalavgrating);
+    }
+
+    //Print Current Cursor's blockAddress :WJ
+    void printCurrentPointer (BPNode* cursor, int i){
+      auto blockAddress = cursor->pointers[i].blockAddress;
+      cout << "printCurrentPointer: "<< blockAddress << endl;
+    }
+
+    //Print Current Cursor's blockAddress with Offset :WJ
+    void printCurrentPointerWithOffset (BPNode* cursor, int i){
+      Address curPtr = cursor->pointers[i];
+      auto addr = curPtr.blockAddress + curPtr.offset;
+      cout << "printCurrentPointerWithOffset: "<< addr << endl;
+    }
+
     int getMaxKeys() { return maxKeys; }
 
     int getNumNodes() { return numNodes; }
-    
-    int getLevels() {
-      if (rootStorageAddress.blockAddress == nullptr) { return 0; }
-
-      // Load in the root node from disk
-      root = (BPNode*) rootStorageAddress.blockAddress;
-      BPNode* cursor = root;
-
-      levels = 1;
-
-      while (!cursor->isLeaf) {
-        cursor = (BPNode*) cursor->pointers[0].blockAddress;
-        levels++;
-      }
-
-      return levels;
-    }
 
     int getBPTreeLevel(Address rootStorageAddress, int level) {
       BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress;
@@ -1662,173 +1676,18 @@ class BPlusTree {
 
     Address getRootStorageAddress() { return rootStorageAddress; };
 
-    int getMaxKeys() { return maxKeys; }
-
-    void search(int lowerBoundKey, int upperBoundKey) {
-      cout << "B+Tree root: " << rootStorageAddress.blockAddress << endl;
-      BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress; //current target in B+Tree
-
-      cout << "isLeaf: " << cursor->isLeaf << endl; //any non-zero value to bool is true
-
-      if (cursor != nullptr) {
-        //WHen its not Leaf Node
-        while(!cursor->isLeaf) {
-          //Loop through all the keys in current Node
-          for (int i = 0; i < cursor->numKeys; i++){
-            int key = getCursorKey(cursor, i);
-
-            cout << "Accessing Key: " << key << endl;
-            cout << "Total keys in current Node: " << cursor->getKeysCount() << endl;
-
-            //Go Left Ptr if LB < current key
-            if (lowerBoundKey < key){
-                cout << " go left "<< endl;
-
-                //test1
-                // cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i], nodeSize);
-
-                //test2
-                cursor = (BPNode*)cursor->pointers[i].blockAddress;
-
-                printCurrentPointer(cursor, i);
-                //displayNode(cursor);
-                break;
-            }
-
-            //When we reached at last key, we switch to Right Ptr (using i+1) and continue searching 
-            if(cursor->getKeysCount()-1 == i){
-              cout << "at last key "<< endl;
-
-              //test1
-              //cursor = (BPNode *)index->loadFromDisk(cursor->pointers[i + 1], nodeSize); //testing line below
-
-              //test2
-              cursor = (BPNode*) cursor->pointers[i + 1].blockAddress;
-
-              displayNode(cursor);
-              printCurrentPointer(cursor, i);
-              break;
-            }
-          }
-
-          cout << "checking isLeaf: " << cursor->isLeaf << endl;
-        }
-
-        //This stage: indicated we have reached Leaf Node
-        //Next step: loop through leaf node keys to match target
-        cout << "End of isLeaf == False while loop "<< endl;
-        //displayNode(cursor);
-        cout << "Key getKeysCount(): " << cursor->getKeysCount() << endl;
-
-        bool flag = false;
-        while(!flag){
-          int i;
-          for (i = 0; i < cursor->getKeysCount(); i++){
-            int key = getCursorKey(cursor,i);
-            if (key > upperBoundKey)
-            {
-              flag = true;
-              cout << "The End: No key found!"<< endl;
-              break;
-            }
-            else if(key >= lowerBoundKey && key<= upperBoundKey){
-              cout << "Found key(low,upper) at [i]="<< i << endl;
-            
-              printCurrentPointer(cursor, i);
-              printCurrentPointerWithOffset(cursor, i); //This pointing to the Key 
-
-              //auto mg = getNewPtr(cursor,i);
-
-              // Address testOffSet;
-              // testOffSet.blockAddress = cursor->pointers[i].blockAddress + cursor->pointers[i].offset;
-              // testOffSet.offset = 0;
-
-              // BPNode *test = (BPNode *)index->loadFromDisk(testOffSet, nodeSize);
-
-              //displayBlock(blockAddr);  //24/9/22 Last debug here 2:16am
-              // displayBlock(cursor->pointers[i].blockAddress);
-
-              //25.9.22 1:47pm testing displayLL
-              //displayLL(cursor->pointers[i]);
-
-              Address llnodeaddress;
-              llnodeaddress.blockAddress = cursor->pointers[i].blockAddress;
-              llnodeaddress.offset = cursor->pointers[i].offset;
-              cout << "Record blockAddr: "<< llnodeaddress.blockAddress << endl;
-
-              //moved into displayLL2()
-              // void *recordAddress = operator new(sizeof(Record));
-              // std::memcpy(recordAddress, testA.blockAddress, sizeof(Record));
-
-              // Record *record = (Record *)recordAddress;
-              // cout << "======="<< endl;
-              // cout << "tconst: "<< record->tconst << endl;
-              // cout << "avgRating: "<< record->avgRating << endl;
-              // cout << "numVotes: "<< record->numVotes << endl;
-              // cout << "======="<< endl;
-              //end
-
-              displayLL(llnodeaddress);
-              //displayLL2(cursor->pointers[i]);  //i: upperBoundKey's Index from Node
-              
-              //test we take with OffSet Addr, and get the Block details
-              displayNode(cursor);
-              
-              flag = true;
-              break;
-            }
-          }
-        }
-      }
-      auto m = 0;
-    }
-
     //Display Key Value from Cursor :WJ
     int getCursorKey(BPNode* cursor, int i) { 
       return cursor->keys[i]; 
     }
 
-    //refactor displayLL2 :WJ (pending 24.9.22)
-    void displayLL(Address LLHeadAddress){
-      cout << "entering displayLL2()....."<<endl;
-
-      LLNode* cursor = (LLNode*) LLHeadAddress.blockAddress + LLHeadAddress.offset;
-
-      while(cursor->next != nullptr){
-        void* recordAddress = operator new(sizeof(Record));
-        memcpy(recordAddress, LLHeadAddress.blockAddress, sizeof(Record));
-
-        Record* currecord = (Record*) recordAddress;
-        cout << "==== Record Details ===="<< endl;
-        cout << "tconst: "<< currecord->tconst << endl;
-        cout << "avgRating: "<< currecord->avgRating << endl;
-        cout << "numVotes: "<< currecord->numVotes << endl;
-        cout << "========================"<< endl;
-
-        cursor = cursor->next;
-      }
-    }
-
-    //Print Current Cursor's blockAddress :WJ
-    void printCurrentPointer (BPNode* cursor, int i){
-      auto blockAddress = cursor->pointers[i].blockAddress;
-      cout << "printCurrentPointer: "<< blockAddress << endl;
-    }
-
-    //Print Current Cursor's blockAddress with Offset :WJ
-    void printCurrentPointerWithOffset (BPNode* cursor , int i){
-      auto curPtr = cursor->pointers[i];
-      auto addr = curPtr.blockAddress + curPtr.offset;
-      cout << "printCurrentPointerWithOffset: "<< addr << endl;
-    }
-
-    void *getNewPtr(BPNode *cursor,int i){
+    void* getNewPtr(BPNode* cursor, int i){
       auto curPtr = cursor->pointers[i];
       auto addr = curPtr.blockAddress + curPtr.offset;
       return addr;
     }
 
-    int countLinkedListNodes(LLNode *head) {
+    int countLinkedListNodes(LLNode* head) {
       LLNode* temp = head;
       int i = 0;
       while(temp != NULL)
@@ -1846,17 +1705,4 @@ class BPlusTree {
       }
       return i;  
     } 
-
-
-    // int countLinkedListNodes(LLNode* head)
-    // {
-    //     // Base Case
-    //     if (head == NULL || !head->next) {
-    //         return 0;
-    //     }
-    //     // Count this node plus the rest of the list
-    //     else {
-    //         return 1 + countLinkedListNodes(head->next);
-    //     }
-    // }
 };

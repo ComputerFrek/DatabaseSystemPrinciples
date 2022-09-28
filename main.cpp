@@ -5,6 +5,7 @@
 #include <string.h>
 #include <vector>
 #include <unordered_map>
+#include <tuple>
 
 #include "storage.cpp"
 #include "bptree.cpp"
@@ -14,29 +15,9 @@ using namespace std;
 
 int main(){
   int BLOCKSIZE=0;
-  cout <<"=========================================================================================="<<endl;
-  cout <<"Select Block size:           "<<endl;
+  cout << "==========================================================================================" << endl;
+  cout << "Enter Block size:" << endl;
 
-  /*int choice = 0;
-  while (choice != 1 && choice != 2){
-    std::cout << "Enter a choice: " <<endl;
-    std::cout << "1. 200 B " <<endl;
-    std::cout << "2. 500 B" <<endl;
-    cin >> choice;
-    if (int(choice) == 1)
-    {
-      BLOCKSIZE = int(200);
-    } 
-    else if (int(choice) == 2)
-    {
-      BLOCKSIZE = int(500);
-    }
-    else 
-    {
-      cin.clear();
-      std::cout << "Invalid input, input either 1 or 2" <<endl;
-    }
-  }*/
   BLOCKSIZE = 200;
 
   // create the stream redirection stuff 
@@ -48,17 +29,12 @@ int main(){
   Storage disk(500000000, BLOCKSIZE);  // 500MB
 
   // Creating the tree 
-  BPlusTree tree = BPlusTree(BLOCKSIZE);
+  BPlusTree tree = BPlusTree(&disk, BLOCKSIZE);
   cout << "Max keys for a B+ tree node: " << tree.getMaxKeys() << endl;
-
-  // Reset the number of blocks accessed to zero
-  disk.resetBlocksAccessed();
-  cout << "Number of record blocks accessed in search operation reset to: 0" << endl;
-  cout << "Number of index blocks accessed in search operation reset to: 0" << endl;
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("data.tsv");
+  ifstream inputfile("datatest.tsv");
   string inputstring;
 
   while(getline(inputfile, inputstring)){
@@ -90,7 +66,7 @@ int main(){
     //cout << "Inserted record " << record.tconst << " - " << record.numVotes << " at block address: " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset + sizeof(Record) << endl;
     //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
     cout << endl;
-
+  }
   /*
   =============================================================
   Experiment 1:
@@ -115,14 +91,16 @@ int main(){
     - the content of the root node and its 1st child node;
   =============================================================
   */
-  cout << "=====================================Experiment 2==========================================" << endl;
+  cout << "==================================== Experiment 2 =========================================" << endl;
   cout << "Parameter n of the B+ tree    : " << tree.getMaxKeys() << endl;
   cout << "Number of nodes of the B+ tree: " << tree.getNumNodes() << endl;
   cout << "Height of the B+ tree         : " << tree.getBPTreeLevel(tree.getRootStorageAddress(), 0) << endl;
   cout << "Root nodes and child nodes :" << endl;
   tree.display(tree.getRootStorageAddress(), 0);
-  cout << "=====================================Experiment 2 End======================================" << endl;
+  cout << "==================================== Experiment 2 End =====================================" << endl;
   cout << endl;
+
+  disk.resetBlocksAccessed();
 
   /*
   =============================================================
@@ -132,15 +110,19 @@ int main(){
     - the number and the content of data blocks the process accesses;
     - the average of “averageRating’s” of the records that are returned;
   =============================================================
-  
-  cout <<"=====================================Experiment 3=========================================="<<endl;
-  cout <<"Retrieving the attribute tconst of those movies with numVotes equal to 500..."<<endl;     
-  tree.search(500,500);
-  cout << endl;
-  cout <<"Number of index blocks the process accesses: " << index.resetBlocksAccessed()<<endl; 
-  cout <<"Number of record blocks the process accesses: " << disk.resetBlocksAccessed()<<endl;
-  cout << "\nNo more records found for range " << 8.0 << " to " << 8.0 << endl;
   */
+  cout << "==================================== Experiment 3 =========================================" << endl;
+  cout << "Retrieving the attribute tconst of those movies with numVotes equal to 500:"<<endl;
+  cout << "tconst  avgrating  numvotes" << endl;
+  int iproc = 0;
+  int rproc = 0;
+  tie(iproc, rproc) = tree.search(5,5);
+  cout << endl;
+  cout << "Number of index nodes processed: " << iproc << endl;
+  cout << "Number of record blocks processed: " << disk.resetBlocksAccessed() << endl;
+  cout << "==================================== Experiment 3 End =====================================" << endl;
+  cout << endl;
+  
   
   /*
   =============================================================
@@ -150,14 +132,18 @@ int main(){
     - the number and the content of data blocks the process accesses;
     - the average of “averageRating’s” of the records that are returned;
   =============================================================
-  
-  cout <<"=====================================Experiment 4=========================================="<<endl;
-  cout <<"Retrieving the attribute tconst of those movies with numVotes from 30,000 to 40,000 (inclusively)..."<<endl;
-  tree.search(30000,40000);
-  cout << endl;
-  cout <<"Number of index blocks the process accesses: "<<index.resetBlocksAccessed()<<endl; 
-  cout <<"Number of data blocks the process accesses: "<<disk.resetBlocksAccessed()<<endl;
   */
+  cout << "==================================== Experiment 4 =========================================" << endl;
+  cout << "Retrieving the attribute tconst of those movies with numVotes from 30,000 to 40,000 (inclusively)..." << endl;
+  cout << "tconst  avgrating  numvotes" << endl;
+  iproc = 0;
+  rproc = 0;
+  tie(iproc, rproc) = tree.search(1, 40000);
+  cout << endl;
+  cout << "Number of index nodes processed: " << iproc << endl;
+  cout << "Number of record blocks processed: " << disk.resetBlocksAccessed() << endl;
+  cout << "==================================== Experiment 4 End =====================================" << endl;
+  cout << endl;
   
   /*
   =============================================================
