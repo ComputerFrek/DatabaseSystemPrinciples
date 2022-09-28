@@ -90,7 +90,6 @@ int main(){
     //cout << "Inserted record " << record.tconst << " - " << record.numVotes << " at block address: " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset + sizeof(Record) << endl;
     //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
     cout << endl;
-  }
 
   /*
   =============================================================
