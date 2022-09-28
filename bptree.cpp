@@ -2004,6 +2004,10 @@ class BPlusTree {
 
       int leftSibling, rightSibling; // Index of left and right child to borrow from.
 
+      int deletedNodesCount; //Count of node is deleted or two nodes are merged
+      int updatedNodesCount; //number nodes of the updated B+ tree;
+      int heightOfBPlusTree; //height of the updated B+ tree
+
       if (cursor != nullptr){
         while(!cursor->isLeaf){
           parent = cursor; // Set the parent of the node
@@ -2093,7 +2097,6 @@ class BPlusTree {
           }
 
           //No Left/Right Sibling to borrow, thus we do Merge Nodes to resolve Underflow
-          //stop here 28.9.22 2pm
 
           // If left sibling exists, merge with it.
           if (leftSibling >= 0){
@@ -2113,12 +2116,12 @@ class BPlusTree {
         
       }
 
-
       return 999;
     }
 
     void deleteTargetKeyFromNode(BPNode *cursor,int pos){
-      for (int i = pos+1; i < cursor->numKeys; i++)
+      //pos+i == index of Target Key
+      for (int i = pos+1; i < cursor->numKeys; i++)  
         {
           cursor->keys[i] = cursor->keys[i + 1];
           cursor->pointers[i] = cursor->pointers[i + 1];
@@ -2139,7 +2142,6 @@ class BPlusTree {
           nullAddress.offset = 0;
           cursor->pointers[i] = nullAddress;
         }
-        auto mah = 9;
     }
 
     bool checkHasUnderflow(BPNode *cursor,int maxKeys){
@@ -2181,6 +2183,8 @@ class BPlusTree {
         //todo: need to return numNodesDeleted after deletion
         return 999;  
       }
+
+      return 0;
     }
 
     int borrowFromRightSibling(BPNode *cursor, BPNode* parent, int rightSibling,int maxKeys){
@@ -2214,6 +2218,8 @@ class BPlusTree {
         //todo: need to return numNodesDeleted after deletion
         return 999;  
       }
+
+      return 0;
     }
 
     void mergeWithLeftSibling(BPNode *cursor, BPNode* parent, int leftSibling){
@@ -2263,8 +2269,6 @@ class BPlusTree {
 
     //refactor displayLL2 :WJ (pending 24.9.22)
     void displayLL2(Address LLHeadAddress){
-      cout << "entering displayLL2()....."<<endl;
-
       void *recordAddress = operator new(sizeof(Record));
       std::memcpy(recordAddress, LLHeadAddress.blockAddress, sizeof(Record));
 
