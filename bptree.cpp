@@ -2017,15 +2017,24 @@ class BPlusTree {
             rightSibling = i + 1;
 
             int key = getCursorKey(cursor,i);
+
+            // If key is lesser than current key, go to the left pointer's node.
             if (target < key){
                 cursor = (BPNode*)cursor->pointers[i].blockAddress;
                 printCurrentPointer(cursor,i);
                 break;
             }
+
+            // Else if key larger than all keys in the node, go to last pointer's node (rightmost).
             if(cursor->getKeysCount()-1 == i){
               leftSibling = i;
               rightSibling = i + 2;
 
+              cout << "debug: " << cursor->pointers[i].blockAddress << endl;
+              cout << "debug2: " << cursor->pointers[i+1].blockAddress << endl;
+
+
+              //to-fix: need to update cursor with Next Node
               cursor = (BPNode*)cursor->pointers[i+1].blockAddress;
               displayNode(cursor);
               printCurrentPointer(cursor,i);
@@ -2044,8 +2053,10 @@ class BPlusTree {
 
           if (getCursorKey(cursor,pos) == target)
           {
-            cout << "The end: Found key at [i+1]=" << pos << ";value=" << cursor->keys[pos] << endl;
+            cout << "The end: Found key at [i]=" << pos << ";value=" << cursor->keys[pos] << endl;
             cout << "The end: Found key ptr: " << cursor->pointers[pos].blockAddress << endl;
+
+            printCurrentPointer(cursor,pos);
             found = true;
             break;
           }
