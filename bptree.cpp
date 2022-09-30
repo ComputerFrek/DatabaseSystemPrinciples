@@ -679,10 +679,15 @@ class BPlusTree {
 
     void removeInternal2(BPNode *parent, BPNode *childNode, int target){
       cout << "remove Internal2()...." << endl;
+      cout << "parent:" << parent << endl;
+      cout << "childNode:" << childNode << endl;
 
       BPNode *cursor = parent;
       
-      if(cursor == rootAddress){
+      if(cursor->numKeys == 1){
+          if (cursor->pointers[1].blockAddress == childNode){
+
+          }
 
       }
     }
