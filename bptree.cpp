@@ -677,8 +677,14 @@ class BPlusTree {
       }
     }
 
-    void removeInternal2(){
-      cout << "removeInternal2()" << endl;
+    void removeInternal2(BPNode *parent, BPNode *childNode, int target){
+      cout << "remove Internal2()...." << endl;
+
+      BPNode *cursor = parent;
+      
+      if(cursor == rootAddress){
+
+      }
     }
 
     // Finds the direct parent of a node in the B+ Tree.
@@ -2090,23 +2096,29 @@ class BPlusTree {
 
         bool hasUnderflow = checkHasUnderflow(cursor,maxKeys);
         if(hasUnderflow){
-          //Try to lend from Left Sibling
-          if (leftSibling >= 0){
-            int numNodesDeleted = borrowFromLeftSibling(cursor,parent,leftSibling,maxKeys);
 
-            if(numNodesDeleted > 0){
-              return numNodesDeleted;
+          bool testFlag = false; //use to skip some code
+
+          if(!testFlag){
+            //Try to lend from Left Sibling
+            if (leftSibling >= 0){
+              int numNodesDeleted = borrowFromLeftSibling(cursor,parent,leftSibling,maxKeys);
+
+              if(numNodesDeleted > 0){
+                return numNodesDeleted;
+              }
+            }
+
+            //Try to lend from Right Sibling
+            if (rightSibling <= parent->numKeys){
+              int numNodesDeleted = borrowFromRightSibling(cursor,parent,rightSibling,maxKeys);
+
+              if(numNodesDeleted > 0){
+                return numNodesDeleted;
+              }
             }
           }
-
-          //Try to lend from Right Sibling
-          if (rightSibling <= parent->numKeys){
-            int numNodesDeleted = borrowFromRightSibling(cursor,parent,rightSibling,maxKeys);
-
-            if(numNodesDeleted > 0){
-              return numNodesDeleted;
-            }
-          }
+          
 
           //No Left/Right Sibling to borrow, thus we do Merge Nodes to resolve Underflow
 
@@ -2249,11 +2261,18 @@ class BPlusTree {
 
       //todo: 
       // We need to update the parent in order to fully remove the current node.
-      removeInternal2();
+      
+      auto kk = parent->keys[leftSibling];
+      auto m = 0;
+      
+      //removeInternal2(parent);
     }
 
     void mergeWithRightSibling(BPNode *cursor, BPNode* parent, int rightSibling){
       BPNode *rightNode = (BPNode*) parent->pointers[rightSibling].blockAddress;
+      cout << "rightNode1: " << rightNode->pointers->blockAddress << endl;
+      cout << "rightNode2: " << parent->pointers[rightSibling].blockAddress << endl;
+      cout << "rootAddress: " << rootAddress << endl;
 
       // Transfer all keys and pointers from right node into current.
       for (int i = cursor->numKeys, j = 0; j < rightNode->numKeys; i++, j++)
@@ -2266,9 +2285,16 @@ class BPlusTree {
       cursor->numKeys += rightNode->numKeys;
       cursor->pointers[cursor->numKeys] = rightNode->pointers[rightNode->numKeys];
 
+
+      auto kk = parent->keys[rightSibling-1];
+      cout << "parent->keys[rightSibling-1]: " << kk << endl;
+      auto m = 0;
+
       //todo: 
       // We need to update the parent in order to fully remove the right node.
-      removeInternal2();
+      //void *rightNodeAddress = parent->pointers[rightSibling].blockAddress;
+      //  removeInternal(parent->keys[rightSibling - 1], (BPNode *)parentDiskAddress, (BPNode *)rightNodeAddress);
+      removeInternal2((BPNode *)parent,(BPNode *)rightNode,kk);
     }
 
 

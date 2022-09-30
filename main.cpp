@@ -76,7 +76,9 @@ int main(){
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("datatest.tsv");
+  //ifstream inputfile("datatest.tsv");
+  ifstream inputfile("data2500.tsv");
+  //ifstream inputfile("data.tsv");
   string inputstring;
 
   vector<Address> datablocks;
