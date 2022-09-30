@@ -681,14 +681,33 @@ class BPlusTree {
       cout << "remove Internal2()...." << endl;
       cout << "parent:" << parent << endl;
       cout << "childNode:" << childNode << endl;
+      cout << "root:" << root << endl;
 
       BPNode *cursor = parent;
       
-      if(cursor->numKeys == 1){
-          if (cursor->pointers[1].blockAddress == childNode){
+      cout << "cursor->numKeys:" << cursor->numKeys << endl;
 
-          }
+      if(cursor == rootStorageAddress.blockAddress){
+        if(cursor->numKeys == 1){
+            if (cursor->pointers[1].blockAddress == childNode){
 
+                Address updateRoot;
+                updateRoot.blockAddress = cursor->pointers[0].blockAddress;
+                updateRoot.offset = 0;
+
+                rootStorageAddress = updateRoot;
+
+                auto ss1 = cursor->pointers[0].blockAddress;
+                cout << "ss1:" << ss1 << endl;
+            }
+            else if(cursor->pointers[0].blockAddress == childNode){
+                auto ss2 = (BPNode *)cursor->pointers[1].blockAddress;
+
+
+                
+                cout << "ss2:" << ss2 << endl;
+            }
+        }
       }
     }
 
@@ -2011,6 +2030,8 @@ class BPlusTree {
     int remove2(int target){
       BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress; //current target in B+Tree
 
+      cout << "rootStorageAddress: " << rootStorageAddress.blockAddress << endl;
+
       BPNode *parent; // Keep track of the parent as we go deeper into the tree in case we need to update it.
 
       int leftSibling, rightSibling; // Index of left and right child to borrow from.
@@ -2101,26 +2122,21 @@ class BPlusTree {
 
         bool hasUnderflow = checkHasUnderflow(cursor,maxKeys);
         if(hasUnderflow){
+          //Try to lend from Left Sibling
+          if (leftSibling >= 0){
+            int numNodesDeleted = borrowFromLeftSibling(cursor,parent,leftSibling,maxKeys);
 
-          bool testFlag = false; //use to skip some code
-
-          if(!testFlag){
-            //Try to lend from Left Sibling
-            if (leftSibling >= 0){
-              int numNodesDeleted = borrowFromLeftSibling(cursor,parent,leftSibling,maxKeys);
-
-              if(numNodesDeleted > 0){
-                return numNodesDeleted;
-              }
+            if(numNodesDeleted > 0){
+              return numNodesDeleted;
             }
+          }
 
-            //Try to lend from Right Sibling
-            if (rightSibling <= parent->numKeys){
-              int numNodesDeleted = borrowFromRightSibling(cursor,parent,rightSibling,maxKeys);
+          //Try to lend from Right Sibling
+          if (rightSibling <= parent->numKeys){
+            int numNodesDeleted = borrowFromRightSibling(cursor,parent,rightSibling,maxKeys);
 
-              if(numNodesDeleted > 0){
-                return numNodesDeleted;
-              }
+            if(numNodesDeleted > 0){
+              return numNodesDeleted;
             }
           }
           
