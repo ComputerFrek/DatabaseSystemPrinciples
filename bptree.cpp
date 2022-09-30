@@ -686,6 +686,7 @@ class BPlusTree {
       BPNode *cursor = parent;
       
       cout << "cursor->numKeys:" << cursor->numKeys << endl;
+      cout << "identify parent Node:" << endl;
 
       if(cursor == rootStorageAddress.blockAddress){
         if(cursor->numKeys == 1){
@@ -703,8 +704,6 @@ class BPlusTree {
             else if(cursor->pointers[0].blockAddress == childNode){
                 auto ss2 = (BPNode *)cursor->pointers[1].blockAddress;
 
-
-                
                 cout << "ss2:" << ss2 << endl;
             }
         }
@@ -2044,9 +2043,16 @@ class BPlusTree {
         while(!cursor->isLeaf){
           parent = cursor; // Set the parent of the node
 
+          //cout << "line2046: " << cursor << endl;
+          cout << "line2046: " << cursor->numKeys << endl;
           for (int i = 0; i < cursor->numKeys; i++){
+            cout << "cursor->pointers[" << i << "]: " << cursor->pointers[i].blockAddress << endl;
+
             leftSibling = i - 1;
             rightSibling = i + 1;
+
+            cout << "leftSibling: " << leftSibling << endl;
+            cout << "rightSibling: " << rightSibling << endl;
 
             int key = getCursorKey(cursor,i);
 
@@ -2145,9 +2151,11 @@ class BPlusTree {
 
           // If left sibling exists, merge with it.
           if (leftSibling >= 0){
+            cout << "mergeWithLeftSibling" << endl;
             mergeWithLeftSibling(cursor,parent,leftSibling);
           }
           else if (rightSibling <= parent->numKeys){
+            cout << "mergeWithRightSibling" << endl;
             mergeWithRightSibling(cursor,parent,rightSibling);
           }
         }
