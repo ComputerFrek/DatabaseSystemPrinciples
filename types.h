@@ -10,13 +10,14 @@ struct Address { // 16bytes?
 // Defines a single movie record (read from data file).
 struct Record { //20bytes?
   char tconst[10];     // ID of the movie. 10bytes
-  float avgRating;    // Average rating of this movie. 4 bytes
+  float avgRating;     // Average rating of this movie. 4 bytes
   int numVotes;        // Number of votes of this movie. 4 bytes
 };
 
-struct LLNode {
-  Address dataaddress;
-  LLNode* next;
+class LLNode {
+  public:
+    Address dataaddress;
+    LLNode* next;
 };
 
 #endif
