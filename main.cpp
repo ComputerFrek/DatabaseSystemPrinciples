@@ -19,19 +19,18 @@ int main(){
   cout << "Enter Block size: " << endl;
   cin >> BLOCKSIZE;
 
-  // create the stream redirection stuff 
-  streambuf* coutbuf = cout.rdbuf(); //save old buffer
+  // Redirect output to file
+  streambuf* coutbuf = cout.rdbuf();
   ofstream out1("output_" + to_string(BLOCKSIZE) + "B.txt");
-  cout.rdbuf(out1.rdbuf());           //redirect std::cout to filename.txt!
+  cout.rdbuf(out1.rdbuf());
 
-  cout << "creating the disk on the stack for records" << endl;
+  //Creating disk for record
   DiskStorage disk(500000000, BLOCKSIZE);  // 500MB
 
-  // Creating the tree 
+  // Initialize the tree 
   BPlusTree tree = BPlusTree(&disk, BLOCKSIZE);
   cout << "Max keys for a B+ tree node: " << tree.getMaxNumOfKeys() << endl;
 
-  // Open test data
   cout << "Reading in data ... " << endl << endl;
   ifstream inputfile("data.tsv");
   string inputstring;
@@ -60,11 +59,9 @@ int main(){
     cout << "Inserting record: " << record.tconst << " to bptree " << endl;
     //build the bplustree as we insert records
     tree.insertRecord(tempAddress, record.numVotes);
-    
-    //logging
-    //cout << "Inserted record " << record.tconst << " - " << record.numVotes << " at block address: " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset + sizeof(Record) << endl;
-    //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
   }
+  cout << endl;
+
   /*
   =============================================================
   Experiment 1:
@@ -94,7 +91,7 @@ int main(){
   cout << "Number of nodes of the B+ tree: " << tree.getTotalNumOfNode() << endl;
   cout << "Height of the B+ tree         : " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;
   cout << "Root nodes and child nodes :" << endl;
-  tree.showBPlusTree(tree.getDiskRootAddress(), 0);
+  tree.showBPlusTree(tree.getDiskRootAddress(), 0, 1);
   cout << "==================================== Experiment 2 End =====================================" << endl;
   cout << endl;
 
@@ -157,10 +154,11 @@ int main(){
   cout <<"Deleting those movies with the attribute numVotes equal to 1000..." << endl;
   int nodesDeleted = tree.removeRecord(1000);
   cout << "B+ Tree after deletion" << endl;
+  tree.showBPlusTree(tree.getDiskRootAddress(), 0, 1);
   cout << "Number of times that a node is deleted (or two nodes are merged): " << nodesDeleted << endl; 
   cout << "Number nodes of the updated B+ tree: " << tree.getTotalNumOfNode() << endl;
   cout << "Height of updated B+ tree: " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;
-  tree.showBPlusTree(tree.getDiskRootAddress(), 1);
+  
   cout << "==================================== Experiment 5 End =====================================" << endl;
   
   return 0;
