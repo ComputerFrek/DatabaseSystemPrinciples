@@ -16,9 +16,8 @@ using namespace std;
 int main(){
   int BLOCKSIZE=0;
   cout << "==========================================================================================" << endl;
-  cout << "Enter Block size:" << endl;
-
-  BLOCKSIZE = 200;
+  cout << "Enter Block size: " << endl;
+  cin >> BLOCKSIZE;
 
   // create the stream redirection stuff 
   streambuf* coutbuf = cout.rdbuf(); //save old buffer
