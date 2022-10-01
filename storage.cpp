@@ -157,12 +157,11 @@ public:
   bool deleteRecord(Address recordAddress, size_t recordSize){
     try{
       // Delete the record from block
-      void *addressToDelete = (char *)recordAddress.blockAddress + recordAddress.offset;
-      std::memset(addressToDelete, '\0', recordSize);
+      void *addressToDelete = (unsigned char *)recordAddress.blockAddress + recordAddress.offset;
+      memset(addressToDelete, '\0', recordSize);
 
       // Update size again once record deleted 
       _sizeOfActualUsed -= recordSize;
-
 
       // Create a dummy test block to test if current block is empty, and initialize the test block to null 
       unsigned char testBlock[_sizeOfEachBlock];
@@ -182,42 +181,7 @@ public:
       return false;
     };
   }
-
-  /*
-  // Get the disk maximum size
-  size_t get_sizeOfMaxDiskStorage() const{
-    return _sizeOfMaxDiskStorage;
-  }
-
-  // Get the size of current block used
-  size_t getBlocksizeUsed() const{
-    return _sizeOfCurrentBlockUsed;
-  };
-
-  // Get the block size
-  size_t getBlockSize() const{
-    return _sizeOfEachBlock;
-  };
-
-  // Get the size of all blocks used
-  size_t getSizeUsed() const{
-    return _sizeOfAllBlcokUsed;
-  }
-
   
-
-  // Get the size of all records has been used
-  size_t getActualsizeUsed() const{
-    return _sizeOfActualUsed;
-  }
-
-  // Get the number of block has been accessed
-  int getNumberOfBlocksAccessed() const{
-    return _numOfBlockAccessed;
-  }
-  */
-  
-
   ~DiskStorage(){};
 };
 #endif
