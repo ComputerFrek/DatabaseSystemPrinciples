@@ -5,6 +5,7 @@
 #include <string.h>
 #include <vector>
 #include <unordered_map>
+#include <tuple>
 
 #include "storage.cpp"
 #include "bptree.cpp"
@@ -13,106 +14,68 @@
 using namespace std;
 
 int main(){
-  int BLOCKSIZE=0;
-  cout <<"=========================================================================================="<<endl;
-  cout <<"Select Block size:           "<<endl;
 
-  /*int choice = 0;
-  while (choice != 1 && choice != 2){
-    std::cout << "Enter a choice: " <<endl;
-    std::cout << "1. 200 B " <<endl;
-    std::cout << "2. 500 B" <<endl;
-    cin >> choice;
-    if (int(choice) == 1)
-    {
-      BLOCKSIZE = int(200);
-    } 
-    else if (int(choice) == 2)
-    {
-      BLOCKSIZE = int(500);
-    }
-    else 
-    {
-      cin.clear();
-      std::cout << "Invalid input, input either 1 or 2" <<endl;
-    }
-  }*/
-  BLOCKSIZE = 200;
+  // Allow to enter block size, in this project block size is 200kB
+  int BLOCKSIZE= 200;
+  cout << "Enter Block size: ";
+  cin >> BLOCKSIZE;
 
-  // create the stream redirection stuff 
-  streambuf* coutbuf = cout.rdbuf(); //save old buffer
-
-  // save experiment1 logging
-  //ofstream out1("experiment1_" + to_string(BLOCKSIZE) + "B.txt");
-  //cout.rdbuf(out1.rdbuf());           //redirect std::cout to filename.txt!
+  // Redirect output to file
+  streambuf* coutbuf = cout.rdbuf();
   ofstream out1("output_" + to_string(BLOCKSIZE) + "B.txt");
-  cout.rdbuf(out1.rdbuf());           //redirect std::cout to filename.txt!
+  cout.rdbuf(out1.rdbuf());
+
+  //Allocate memory on disk to store record
+  DiskStorage disk(500000000, BLOCKSIZE);  // 500MB
+
+  // Initialize the tree 
+  BPlusTree tree = BPlusTree(&disk, BLOCKSIZE);
+  cout << "Max keys for a B+ tree node: " << tree.getMaxNumOfKeys() << endl;
+
+  cout << "Reading in data ... " << endl << endl;
+  ifstream inputfile("data.tsv");
+  string inputString;
+
+  while(getline(inputfile, inputString)){
+    if(inputString.rfind("tconst", 0) == 0){
+        continue;
+    }
+
+    vector <string> inputToken;
+    istringstream iss(inputString);
+    string word;
+
+    while(getline(iss, word, '\t')){
+        inputToken.push_back(word);
+    }
+    
+    Record record;
+    strcpy(record.tconst, inputToken[0].c_str());
+    record.avgRating = stod(inputToken[1]);
+    record.numVotes = stoi(inputToken[2]);
+
+    //cout << "Writing record: " << record.tconst << endl;
+    Address tempAddress = disk.saveDataToDisk(&record, sizeof(Record));
+
+    cout << "Inserting record: " << record.tconst << " to bptree " << endl;
+    //build the bplustree as we insert records
+    tree.insertRecord(tempAddress, record.numVotes);
+  }
+  cout << endl;
 
   /*
   =============================================================
   Experiment 1:
-  Store the data (which is about IMDb movives and described in Part 4) on the disk and report the following statistics:
-  - The number of blocks;
-  - The size of database;
+  Store the data (which is about IMDb movives and described in Part 4) on the disk (as specified in Part 1) and report the following statistics:
+  - the number of blocks;
+  - the size of database (in terms of MB);
   =============================================================
   */
-
-  // Create memory pools for the disk and the index, total 500MB
-  // The split is determined empirically. We split so that we can have a contiguous disk address space for records
-  cout << "creating the disk on the stack for records, index" << endl;
-  Storage index(350000000, BLOCKSIZE); // 350MB
-  Storage disk(150000000, BLOCKSIZE);  // 150MB
-
-
-  // Creating the tree 
-  BPlusTree tree = BPlusTree(BLOCKSIZE, &disk, &index);
-  cout << "Max keys for a B+ tree node: " << tree.getMaxKeys() << endl;
-
-  // Reset the number of blocks accessed to zero
-  disk.resetBlocksAccessed();
-  index.resetBlocksAccessed();
-  cout << "Number of record blocks accessed in search operation reset to: 0" << endl;
-  cout << "Number of index blocks accessed in search operation reset to: 0" << endl;
-
-  // Open test data
-  cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("data.tsv");
-  string inputstring;
-
-  vector<Address> datablocks;
-  vector<BPNode*> indexblocks;
-
-  while(getline(inputfile, inputstring)){
-    if(inputstring.rfind("tconst", 0) == 0){
-        continue;
-    }
-
-    vector <string> inputtoken;
-    istringstream iss(inputstring);
-    string word;
-
-    while(getline(iss, word, '\t')){
-        inputtoken.push_back(word);
-    }
-    
-    Record record;
-    strcpy(record.tconst, inputtoken[0].c_str());
-    record.avgRating = stod(inputtoken[1]);
-    record.numVotes = stoi(inputtoken[2]);
-
-    cout << "Writing record: " << record.tconst << endl;
-    Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
-
-    cout << "Inserting record: " << record.tconst << " to bptree " << endl;
-    //build the bplustree as we insert records
-    tree.insert(tempAddress, record.numVotes);
-    
-    //logging
-    cout << "Inserted record " << record.tconst << " at block address: " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset + sizeof(Record) << endl;
-    //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
-
-    cout << endl;
-  }
+  cout << "==================================== Experiment 1 =========================================" << endl;
+  cout << "Number of blocks : " << disk.getNumberOfBlockAllocated() << endl;
+  cout << "Size of database : " << ((disk.getNumberOfBlockAllocated() * BLOCKSIZE) / 1000) << endl;
+  cout << "==================================== Experiment 1 End =====================================" << endl;
+  cout << endl;
 
   /*
   =============================================================
@@ -124,16 +87,78 @@ int main(){
     - the content of the root node and its 1st child node;
   =============================================================
   */
-  // save experiment2 logging
-  //ofstream out2("experiment2_" + to_string(BLOCKSIZE) + "B.txt");
-  //cout.rdbuf(out2.rdbuf());           //redirect std::cout to filename.txt!
-
-  // call experiment 2
-  cout << "=====================================Experiment 2==========================================" << endl;
-  cout << "Parameter n of the B+ tree    : " << tree.getMaxKeys() << endl;
-  cout << "Number of nodes of the B+ tree: " << tree.getNumNodes() << endl;
-  cout << "Height of the B+ tree         : " << tree.getLevels() << endl;
+  cout << "==================================== Experiment 2 =========================================" << endl;
+  cout << "Parameter n of the B+ tree    : " << tree.getMaxNumOfKeys() << endl;
+  cout << "Number of nodes of the B+ tree: " << tree.getTotalNumOfNode() << endl;
+  cout << "Height of the B+ tree         : " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;
   cout << "Root nodes and child nodes :" << endl;
-  tree.display(tree.getRootStorageAddress(), 0);
-  cout << "=====================================Experiment 2 End======================================" << endl;
+  tree.showBPlusTree(tree.getDiskRootAddress(), 0, 1);
+  cout << "==================================== Experiment 2 End =====================================" << endl;
+  cout << endl;
+
+  disk.resetNumberOfBlocksAccessed();
+
+  /*
+  =============================================================
+  Experiment 3:
+  Retrieve those movies with the “numVotes” equal to 500 and report the following statistics:
+    - the number and the content of index nodes the process accesses; (for the content, it would be sufficient to report for the first 5 index nodes or data blocks only if there are more than 5, and this applies throughout Experiment 3 and Experiment 4).
+    - the number and the content of data blocks the process accesses;
+    - the average of “averageRating’s” of the records that are returned;
+  =============================================================
+  */
+  cout << "==================================== Experiment 3 =========================================" << endl;
+  cout << "Retrieving the attribute tconst of those movies with numVotes equal to 500:"<<endl;
+  cout << "tconst  avgrating  numvotes" << endl;
+  int iproc = 0;
+  int rproc = 0;
+  tie(iproc, rproc) = tree.searchKey(500,500);
+  cout << endl;
+  cout << "Number of index nodes processed: " << iproc << endl;
+  cout << "Number of record blocks processed: " << disk.resetNumberOfBlocksAccessed() << endl;
+  cout << "==================================== Experiment 3 End =====================================" << endl;
+  cout << endl;
+  
+  /*
+  =============================================================
+  Experiment 4:
+  Retrieve those movies with the attribute “numVotes” from 30,000 to 40,000, both inclusively and report the following statistics:
+    - the number and the content of index nodes the process accesses;
+    - the number and the content of data blocks the process accesses;
+    - the average of “averageRating’s” of the records that are returned;
+  =============================================================
+  */
+  cout << "==================================== Experiment 4 =========================================" << endl;
+  cout << "Retrieving the attribute tconst of those movies with numVotes from 30,000 to 40,000 (inclusively)..." << endl;
+  cout << "tconst  avgrating  numvotes" << endl;
+  iproc = 0;
+  rproc = 0;
+  tie(iproc, rproc) = tree.searchKey(30000, 40000);
+  cout << endl;
+  cout << "Number of index nodes processed: " << iproc << endl;
+  cout << "Number of record blocks processed: " << disk.resetNumberOfBlocksAccessed() << endl;
+  cout << "==================================== Experiment 4 End =====================================" << endl;
+  cout << endl;
+  
+  /*
+  =============================================================
+  Experiment 5:
+  Delete those movies with the attribute “numVotes” equal to 1,000, update the B+ tree accordingly, and report the following statistics:
+- the number of times that a node is deleted (or two nodes are merged) during the process of the updating the B+ tree;
+- the number nodes of the updated B+ tree;
+- the height of the updated B+ tree;
+- the content of the root node and its 1st child node of the updated B+ tree;
+  =============================================================
+  */
+  cout << "==================================== Experiment 5 =========================================" << endl;
+  cout <<"Deleting those movies with the attribute numVotes equal to 1000..." << endl;
+  int nodesDeleted = tree.removeRecord(1000);
+  cout << "B+ Tree after deletion" << endl;
+  tree.showBPlusTree(tree.getDiskRootAddress(), 0, 1);
+  cout << "Number of times that a node is deleted (or two nodes are merged): " << nodesDeleted << endl; 
+  cout << "Number nodes of the updated B+ tree: " << tree.getTotalNumOfNode() << endl;
+  cout << "Height of updated B+ tree: " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;
+  cout << "==================================== Experiment 5 End =====================================" << endl;
+  
+  return 0;
 }
