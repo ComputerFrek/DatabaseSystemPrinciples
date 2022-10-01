@@ -55,10 +55,10 @@ int main(){
     record.avgRating = stod(inputtoken[1]);
     record.numVotes = stoi(inputtoken[2]);
 
-    cout << "Writing record: " << record.tconst << endl;
-    Address tempAddress = disk.saveDataToDisk(&record, sizeof(Record));
+    //cout << "Writing record: " << record.tconst << endl;
+    Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
 
-    cout << "Inserting record: " << record.tconst << " to bptree " << endl;
+    //cout << "Inserting record: " << record.tconst << " to bptree " << endl;
     //build the bplustree as we insert records
     tree.insert(tempAddress, record.numVotes);
     
