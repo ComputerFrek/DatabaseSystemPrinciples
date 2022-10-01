@@ -330,6 +330,528 @@ class BPlusTree {
       }
     }
 
+    // Helper function for deleting records.
+    void removeInternal(int key, BPNode *cursorDiskAddress, BPNode *childDiskAddress) {
+      // Load in cursor (parent) and child from disk to get latest copy.
+      //Address cursorAddress{cursorDiskAddress, 0};
+      Address cursorAddress;
+      cursorAddress.blockAddress = cursorDiskAddress;
+      cursorAddress.offset = 0;
+      BPNode* cursor = (BPNode *)index->loadFromDisk(cursorAddress, nodeSize);
+
+      // Check if cursor is root via disk address.
+      if (cursorDiskAddress == rootAddress)
+      {
+        root = cursor;
+      }
+
+      // Get address of child to delete.
+      //Address childAddress{childDiskAddress, 0};
+      Address childAddress;
+      childAddress.blockAddress = childDiskAddress;
+      childAddress.offset = 0;
+
+      // If current parent is root
+      if (cursor == root)
+      {
+        // If we have to remove all keys in root (as parent) we need to change the root to its child.
+        if (cursor->numKeys == 1)
+        {
+          // If the larger pointer points to child, make it the new root.
+          if (cursor->pointers[1].blockAddress == childDiskAddress)
+          {
+            // Delete the child completely
+            index->deallocate(childAddress, nodeSize);
+
+            // Set new root to be the parent's left pointer
+            // Load left pointer into main memory and update root.
+            root = (BPNode *)index->loadFromDisk(cursor->pointers[0], nodeSize);
+            rootAddress = (BPNode *)cursor->pointers[0].blockAddress;
+
+            // We can delete the old root (parent).
+            index->deallocate(cursorAddress, nodeSize);
+
+            // Nothing to save to disk. All updates happened in main memory.
+            std::cout << "Root node changed." << endl;
+            return;
+          }
+          // Else if left pointer in root (parent) contains the child, delete from there.
+          else if (cursor->pointers[0].blockAddress == childDiskAddress)
+          {
+            // Delete the child completely
+            index->deallocate(childAddress, nodeSize);
+
+            // Set new root to be the parent's right pointer
+            // Load right pointer into main memory and update root.
+            root = (BPNode *)index->loadFromDisk(cursor->pointers[1], nodeSize);
+            rootAddress = (BPNode *)cursor->pointers[1].blockAddress;
+
+            // We can delete the old root (parent).
+            index->deallocate(cursorAddress, nodeSize);
+
+            // Nothing to save to disk. All updates happened in main memory.
+            std::cout << "Root node changed." << endl;
+            return;
+          }
+        }
+      }
+
+      // If reach here, means parent is NOT the root.
+      // Aka we need to delete an internal node (possibly recursively).
+      int pos;
+
+      // Search for key to delete in parent based on child's lower bound key.
+      for (pos = 0; pos < cursor->numKeys; pos++)
+      {
+        if (cursor->keys[pos] == key)
+        {
+          break;
+        }
+      }
+
+      // Delete the key by shifting all keys forward
+      for (int i = pos; i < cursor->numKeys; i++)
+      {
+        cursor->keys[i] = cursor->keys[i + 1];
+      }
+
+      // Search for pointer to delete in parent
+      // Remember pointers are on the RIGHT for non leaf nodes.
+      for (pos = 0; pos < cursor->numKeys + 1; pos++)
+      {
+        if (cursor->pointers[pos].blockAddress == childDiskAddress)
+        {
+          break;
+        }
+      }
+
+      // Now move all pointers from that point on forward by one to delete it.
+      for (int i = pos; i < cursor->numKeys + 1; i++)
+      {
+        cursor->pointers[i] = cursor->pointers[i + 1];
+      }
+
+      // Update numKeys
+      cursor->numKeys--;
+
+      // Check if there's underflow in parent
+      // No underflow, life is good.
+      if (cursor->numKeys >= (maxKeys + 1) / 2 - 1)
+      {
+        return;
+      }
+
+      // If we reach here, means there's underflow in parent's keys.
+      // Try to steal some from neighbouring nodes.
+      // If we are the root, we are screwed. Just give up.
+      if (cursorDiskAddress == rootAddress)
+      {
+        return;
+      }
+
+      // If not, we need to find the parent of this parent to get our siblings.
+      // Pass in lower bound key of our child to search for it.
+      //BPNode *parentDiskAddress = findParent((BPNode *)rootAddress, cursorDiskAddress, cursor->keys[0]);
+      int leftSibling, rightSibling;
+
+      // Load parent into main memory.
+      //Address parentAddress{parentDiskAddress, 0};
+      Address parentAddress;
+      //parentAddress.blockAddress = parentDiskAddress;
+      parentAddress.blockAddress = nullptr;
+      parentAddress.offset = 0;
+      BPNode *parent = (BPNode *)index->loadFromDisk(parentAddress, nodeSize);
+
+      // Find left and right sibling of cursor, iterate through pointers.
+      for (pos = 0; pos < parent->numKeys + 1; pos++)
+      {
+        if (parent->pointers[pos].blockAddress == cursorDiskAddress)
+        {
+          leftSibling = pos - 1;
+          rightSibling = pos + 1;
+          break;
+        }
+      }
+
+      // Try to borrow a key from either the left or right sibling.
+      // Check if left sibling exists. If so, try to borrow.
+      if (leftSibling >= 0)
+      {
+        // Load in left sibling from disk.
+        BPNode *leftNode = (BPNode *)index->loadFromDisk(parent->pointers[leftSibling], nodeSize);
+
+        // Check if we can steal (ahem, borrow) a key without underflow.
+        // Non leaf nodes require a minimum of ⌊n/2⌋
+        if (leftNode->numKeys >= (maxKeys + 1) / 2)
+        {
+          // We will insert this borrowed key into the leftmost of current node (smaller).
+          // Shift all remaining keys and pointers back by one.
+          for (int i = cursor->numKeys; i > 0; i--)
+          {
+            cursor->keys[i] = cursor->keys[i - 1];
+          }
+
+          // Transfer borrowed key and pointer to cursor from left node.
+          // Basically duplicate cursor lower bound key to keep pointers correct.
+          cursor->keys[0] = parent->keys[leftSibling];
+          parent->keys[leftSibling] = leftNode->keys[leftNode->numKeys - 1];
+
+          // Move all pointers back to fit new one
+          for (int i = cursor->numKeys + 1; i > 0; i--)
+          {
+            cursor->pointers[i] = cursor->pointers[i - 1];
+          }
+
+          // Add pointers to cursor from left node.
+          cursor->pointers[0] = leftNode->pointers[leftNode->numKeys];
+
+          // Change key numbers
+          cursor->numKeys++;
+          leftNode->numKeys--;
+
+          // Update left sibling (shift pointers left)
+          leftNode->pointers[cursor->numKeys] = leftNode->pointers[cursor->numKeys + 1];
+
+          // Save parent to disk.
+          //Address parentAddress{parentDiskAddress, 0};
+          Address parentAddress;
+          //parentAddress.blockAddress = parentDiskAddress;
+          parentAddress.blockAddress = nullptr;
+          parentAddress.offset = 0;
+          index->saveToDisk(parent, nodeSize, parentAddress);
+
+          // Save left sibling to disk.
+          index->saveToDisk(leftNode, nodeSize, parent->pointers[leftSibling]);
+
+          // Save current node to disk.
+          Address cursorAddress = {cursorDiskAddress, 0};
+          index->saveToDisk(cursor, nodeSize, cursorAddress);
+          return;
+        }
+      }
+
+      // If we can't take from the left sibling, take from the right.
+      // Check if we even have a right sibling.
+      if (rightSibling <= parent->numKeys)
+      {
+        // If we do, load in right sibling from disk.
+        BPNode *rightNode = (BPNode *)index->loadFromDisk(parent->pointers[rightSibling], nodeSize);
+
+        // Check if we can steal (ahem, borrow) a key without underflow.
+        if (rightNode->numKeys >= (maxKeys + 1) / 2)
+        {
+          // No need to shift remaining pointers and keys since we are inserting on the rightmost.
+          // Transfer borrowed key and pointer (leftmost of right node) over to rightmost of current node.
+          cursor->keys[cursor->numKeys] = parent->keys[pos];
+          parent->keys[pos] = rightNode->keys[0];
+
+          // Update right sibling (shift keys and pointers left)
+          for (int i = 0; i < rightNode->numKeys - 1; i++)
+          {
+            rightNode->keys[i] = rightNode->keys[i + 1];
+          }
+
+          // Transfer first pointer from right node to cursor
+          cursor->pointers[cursor->numKeys + 1] = rightNode->pointers[0];
+
+          // Shift pointers left for right node as well to delete first pointer
+          for (int i = 0; i < rightNode->numKeys; ++i)
+          {
+            rightNode->pointers[i] = rightNode->pointers[i + 1];
+          }
+
+          // Update numKeys
+          cursor->numKeys++;
+          rightNode->numKeys--;
+
+          // Save parent to disk.
+          //Address parentAddress{parentDiskAddress, 0};
+          Address parentAddress;
+          //parentAddress.blockAddress = parentDiskAddress;
+          parentAddress.blockAddress = nullptr;
+          parentAddress.offset = 0;
+          index->saveToDisk(parent, nodeSize, parentAddress);
+
+          // Save right sibling to disk.
+          index->saveToDisk(rightNode, nodeSize, parent->pointers[rightSibling]);
+
+          // Save current node to disk.
+          Address cursorAddress = {cursorDiskAddress, 0};
+          index->saveToDisk(cursor, nodeSize, cursorAddress);
+          return;
+        }
+      }
+
+      // If we reach here, means no sibling we can steal from.
+      // To resolve underflow, we must merge nodes.
+
+      // If left sibling exists, merge with it.
+      if (leftSibling >= 0)
+      {
+        // Load in left sibling from disk.
+        BPNode *leftNode = (BPNode *)index->loadFromDisk(parent->pointers[leftSibling], nodeSize);
+
+        // Make left node's upper bound to be cursor's lower bound.
+        leftNode->keys[leftNode->numKeys] = parent->keys[leftSibling];
+
+        // Transfer all keys from current node to left node.
+        // Note: Merging will always suceed due to ⌊(n)/2⌋ (left) + ⌊(n-1)/2⌋ (current).
+        for (int i = leftNode->numKeys + 1, j = 0; j < cursor->numKeys; j++)
+        {
+          leftNode->keys[i] = cursor->keys[j];
+        }
+
+        // Transfer all pointers too.
+        //Address nullAddress{nullptr, 0};
+        Address nullAddress;
+        nullAddress.blockAddress = nullptr;
+        nullAddress.offset = 0;
+        for (int i = leftNode->numKeys + 1, j = 0; j < cursor->numKeys + 1; j++)
+        {
+          leftNode->pointers[i] = cursor->pointers[j];
+          cursor->pointers[j] = nullAddress;
+        }
+
+        // Update variables, make left node last pointer point to the next leaf node pointed to by current.
+        leftNode->numKeys += cursor->numKeys + 1;
+        cursor->numKeys = 0;
+
+        // Save left node to disk.
+        index->saveToDisk(leftNode, nodeSize, parent->pointers[leftSibling]);
+
+        // Delete current node (cursor)
+        // We need to update the parent in order to fully remove the current node.
+        //removeInternal(parent->keys[leftSibling], (BPNode *)parentDiskAddress, (BPNode *)cursorDiskAddress);
+      }
+      // If left sibling doesn't exist, try to merge with right sibling.
+      else if (rightSibling <= parent->numKeys)
+      {
+        // Load in right sibling from disk.
+        BPNode *rightNode = (BPNode *)index->loadFromDisk(parent->pointers[rightSibling], nodeSize);
+
+        // Set upper bound of cursor to be lower bound of right sibling.
+        cursor->keys[cursor->numKeys] = parent->keys[rightSibling - 1];
+
+        // Note we are moving right node's stuff into ours.
+        // Transfer all keys from right node into current.
+        // Note: Merging will always suceed due to ⌊(n)/2⌋ (left) + ⌊(n-1)/2⌋ (current).
+        for (int i = cursor->numKeys + 1, j = 0; j < rightNode->numKeys; j++)
+        {
+          cursor->keys[i] = rightNode->keys[j];
+        }
+
+        // Transfer all pointers from right node into current.
+        Address nullAddress = {nullptr, 0};
+        for (int i = cursor->numKeys + 1, j = 0; j < rightNode->numKeys + 1; j++)
+        {
+          cursor->pointers[i] = rightNode->pointers[j];
+          rightNode->pointers[j] = nullAddress;
+        }
+
+        // Update variables
+        cursor->numKeys += rightNode->numKeys + 1;
+        rightNode->numKeys = 0;
+
+        // Save current node to disk.
+        //Address cursorAddress{cursorDiskAddress, 0};
+        Address cursorAddress;
+        cursorAddress.blockAddress = cursorDiskAddress;
+        cursorAddress.offset = 0;
+        index->saveToDisk(cursor, nodeSize, cursorAddress);
+
+        // Delete right node.
+        // We need to update the parent in order to fully remove the right node.
+        void *rightNodeAddress = parent->pointers[rightSibling].blockAddress;
+        //removeInternal(parent->keys[rightSibling - 1], (BPNode *)parentDiskAddress, (BPNode *)rightNodeAddress);
+      }
+    }
+
+    void removeInternal2(int target, BPNode* parentNode, BPNode* childNode) {
+      //parent(cursor)
+      cout << "remove Internal2()...." << endl;
+      cout << "parentNode:" << parentNode << endl;
+      displayNode(parentNode);
+      cout << "childNode:" << childNode << endl;
+      displayNode(childNode);
+      cout << "root:" << root << endl;
+
+      BPNode* cursor = parentNode;
+      
+      cout << "cursor->numKeys:" << cursor->numKeys << endl;
+      cout << "identify parent Node:" << endl;
+
+      if(cursor == rootStorageAddress.blockAddress) {
+        if(cursor->numKeys == 1){
+          if (cursor->pointers[1].blockAddress == childNode){
+            Address updateRoot;
+            updateRoot.blockAddress = cursor->pointers[0].blockAddress;
+            updateRoot.offset = 0;
+
+            root = (BPNode*) updateRoot.blockAddress;
+            rootStorageAddress = updateRoot;
+            
+            cout << "Updated root from right" << endl;
+            return;
+          } else if(cursor->pointers[0].blockAddress == childNode){
+            Address updateRoot;
+            updateRoot.blockAddress = cursor->pointers[1].blockAddress;
+            updateRoot.offset = 0;
+
+            root = (BPNode*) updateRoot.blockAddress;
+            rootStorageAddress = updateRoot;
+
+            cout << "Update root from left" << endl;
+            return;
+          }
+        }
+      }
+
+      //Parent is not root, find position of target to delete
+      int position;
+      for(position = 0; position < cursor->numKeys; position++) {
+        if(cursor->keys[position] == target) {
+          break;
+        }
+      }
+
+      //Shift everything infront
+      for(int i = position; i < cursor->numKeys; i++) {
+        cursor->keys[i] = cursor->keys[i + 1];
+      }
+
+      for(position = 0; position < cursor->numKeys + 1; position++) {
+        if(cursor->pointers[position].blockAddress == childNode) {
+          break;
+        }
+      }
+
+      for(int i = position; i < cursor->numKeys + 1; i++) {
+        cursor->pointers[i] = cursor->pointers[i + 1];
+      }
+
+      cursor->numKeys--;
+
+      if(cursor->numKeys >= (maxKeys + 1) / 2 - 1) {
+        return;
+      }
+
+      if(cursor == root) {
+        return;
+      }
+
+      int leftsibling, rightsibling;
+      Address parentdiskadd;
+      parentdiskadd.blockAddress = parentNode;
+      parentdiskadd.offset = 0;
+
+      Address parentparentnodeadd = findParent(cursor->keys[0], rootStorageAddress, parentdiskadd);
+      BPNode* parentparentnode = (BPNode*) parentparentnodeadd.blockAddress;
+
+      for(position = 0; position < parentparentnode->numKeys + 1; position++) {
+        if(parentparentnode->pointers[position].blockAddress == parentNode) {
+          leftsibling = position - 1;
+          rightsibling = position + 1;
+          break;
+        }
+      }
+
+      if(leftsibling >= 0){
+        BPNode* leftnode = (BPNode*) parentparentnode->pointers[leftsibling].blockAddress;
+
+        if(leftnode->numKeys >= (maxKeys + 1) / 2){
+          for(int i = cursor->numKeys; i > 0; i--){
+            cursor->keys[i] = cursor->keys[i - 1];
+          }
+
+          cursor->keys[0] = parentparentnode->keys[leftsibling];
+          parentparentnode->keys[leftsibling] = leftnode->keys[leftnode->numKeys - 1];
+
+          for(int i = cursor->numKeys + 1; i > 0; i--){
+            cursor->pointers[i] = cursor->pointers[i - 1];
+          }
+
+          cursor->pointers[0] = leftnode->pointers[leftnode->numKeys];
+
+          cursor->numKeys++;
+          leftnode->numKeys++;
+
+          leftnode->pointers[cursor->numKeys] = leftnode->pointers[cursor->numKeys + 1];
+          return;
+        }
+      }
+
+      if(rightsibling <= parentparentnode->numKeys){
+        BPNode* rightnode = (BPNode*) parentparentnode->pointers[rightsibling].blockAddress;
+
+        if(rightnode->numKeys >= (maxKeys + 1) / 2){
+          cursor->keys[cursor->numKeys] = parentparentnode->keys[position];
+          parentparentnode->keys[position] = rightnode->keys[0];
+
+          for(int i = 0; i < rightnode->numKeys - 1; i++){
+            rightnode->keys[i] = rightnode->keys[i + 1];
+          }
+          
+          cursor->pointers[cursor->numKeys + 1] = rightnode->pointers[0];
+
+          for(int i = 0; i < rightnode->numKeys; i++){
+            rightnode->pointers[i] = rightnode->pointers[i + 1];
+          }
+
+          cursor->numKeys++;
+          rightnode->numKeys--;
+          return;
+        }
+      }
+
+      //No sibiling to steal, merge
+      if(leftsibling >= 0){
+        BPNode* leftnode = (BPNode*) parentparentnode->pointers[leftsibling].blockAddress;
+
+        leftnode->keys[leftnode->numKeys] = parentparentnode->keys[leftsibling];
+
+        int j;
+        for (int i = leftnode->numKeys + 1, j = 0; j < cursor->numKeys; j++){
+          leftnode->keys[i] = cursor->keys[j];
+        }
+
+        Address nulladdress;
+        nulladdress.blockAddress = nullptr;
+        nulladdress.offset = 0;
+
+        for (int i = leftnode->numKeys + 1, j = 0; j < cursor->numKeys + 1; j++){
+          leftnode->pointers[i] = cursor->pointers[j];
+          cursor->pointers[j] = nulladdress;
+        }
+
+        leftnode->numKeys += cursor->numKeys + 1;
+        cursor->numKeys = 0;
+
+        removeInternal2(parentparentnode->keys[leftsibling], parentparentnode, parentNode);
+      } else if(rightsibling <= parentparentnode->numKeys){
+        BPNode* rightnode = (BPNode*) parentparentnode->pointers[rightsibling].blockAddress;
+
+        cursor->keys[cursor->numKeys] = parentparentnode->keys[rightsibling - 1];
+
+        for(int i = cursor->numKeys + 1, j = 0; j < rightnode->numKeys; j++){
+          cursor->keys[i] = rightnode->keys[j];
+        }
+
+        Address nulladdress;
+        nulladdress.blockAddress = nullptr;
+        nulladdress.offset = 0;
+
+        for(int i = cursor->numKeys + 1, j = 0; j < rightnode->numKeys + 1; j++){
+          cursor->pointers[i] = rightnode->pointers[j];
+          rightnode->pointers[j] = nulladdress;
+        }
+
+        cursor->numKeys += rightnode->numKeys + 1;
+        rightnode->numKeys = 0;
+
+        removeInternal2(parentparentnode->keys[rightsibling - 1], parentNode, rightnode);
+      }
+    }
+
     // Finds the direct parent of a node in the B+ Tree.
     // Takes in root and a node to find parent for, returns parent's disk address.
     Address findParent(int lowerBoundKey, Address rootStorageAddress, Address childStorageAddress){
@@ -914,5 +1436,353 @@ class BPlusTree {
     //Display Key Value from Cursor :WJ
     int getCursorKey(BPNode* cursor, int i) { 
       return cursor->keys[i]; 
+    }
+
+    int getNumNodes() { return numNodes; }
+
+    int getMaxKeys() { return maxKeys; }
+
+    int remove2(int target){
+      BPNode* cursor = (BPNode*) rootStorageAddress.blockAddress; //current target in B+Tree
+      BPNode* parent; // Keep track of the parent as we go deeper into the tree in case we need to update it.
+
+      cout << "rootStorageAddress: " << rootStorageAddress.blockAddress << endl;
+
+      int leftSibling, rightSibling; // Index of left and right child to borrow from.
+      int deletedNodesCount; //Count of node is deleted or two nodes are merged
+      int updatedNodesCount; //number nodes of the updated B+ tree;
+      int heightOfBPlusTree; //height of the updated B+ tree
+
+      if (cursor != nullptr){
+        while(!cursor->isLeaf){
+          parent = cursor; // Set the parent of the node
+
+          //cout << "line2046: " << cursor << endl;
+          //cout << "line2046: " << cursor->numKeys << endl;
+          for (int i = 0; i < cursor->numKeys; i++){
+            cout << "cursor->pointers[ " << i << " ]: " << cursor->pointers[i].blockAddress << endl;
+
+            leftSibling = i - 1;
+            rightSibling = i + 1;
+
+            cout << "leftSibling: " << leftSibling << endl;
+            cout << "rightSibling: " << rightSibling << endl;
+
+            int key = getCursorKey(cursor,i);
+
+            // If key is lesser than current key, go to the left pointer's node.
+            if (target < key) {
+                cursor = (BPNode*) cursor->pointers[i].blockAddress;
+                //printCurrentPointer(cursor,i);
+                break;
+            }
+
+            // Else if key larger than all keys in the node, go to last pointer's node (rightmost).
+            if(cursor->getKeysCount() - 1 == i) {
+              leftSibling = i;
+              rightSibling = i + 2;
+
+              //cout << "debug: " << cursor->pointers[i].blockAddress << endl;
+              //cout << "debug2: " << cursor->pointers[i+1].blockAddress << endl;
+
+              //to-fix: need to update cursor with Next Node
+              cursor = (BPNode*) cursor->pointers[i + 1].blockAddress;
+              displayNode(cursor);
+              //printCurrentPointer(cursor,i);
+              break;
+            }
+          }
+        }
+
+        //Reach leaf node
+        bool foundkey = false;
+        int pos;  //The position of the target key if found
+
+        cout << "numKeys: " << cursor->numKeys << endl;
+        for (pos = 0; pos < cursor->numKeys; pos++) {
+          cout << "[ " << pos << " ] = " << cursor->keys[pos] << endl;
+
+          if (getCursorKey(cursor,pos) == target) {
+            cout << "The end: Found key at [i]=" << pos << ";value=" << cursor->keys[pos] << endl;
+            cout << "The end: Found key ptr: " << cursor->pointers[pos].blockAddress << " + " << cursor->pointers[pos].offset << endl;
+
+            //printCurrentPointer(cursor,pos);
+            foundkey = true;
+            break;
+          }
+        }
+
+        if (!foundkey){
+          cout << "The end: No key found" << endl;
+
+          //todo: need to return numNodesDeleted after deletion
+          return 0; 
+        }
+
+        //cout << "line 2038" << endl;
+
+        //todo: remove Linked List
+
+        //delete the key
+        deleteTargetKeyFromNode(cursor, pos);
+
+        movePointersForward(cursor, maxKeys);
+
+        // If current node is root, check if tree still has keys.
+        if (cursor == root && cursor->numKeys == 0) {
+           // Reset root pointers in the B+ Tree.
+          root = nullptr;
+          rootAddress = nullptr;
+
+          //todo: need to return numNodesDeleted after deletion
+          return 999; 
+        }
+
+        bool hasUnderflow = checkHasUnderflow(cursor,maxKeys);
+        if(hasUnderflow){
+          //Try to lend from Left Sibling
+          if (leftSibling >= 0) {
+            int numNodesDeleted = borrowFromLeftSibling(cursor,parent,leftSibling,maxKeys);
+
+            if(numNodesDeleted > 0){
+              return numNodesDeleted;
+            }
+          }
+
+          //Try to lend from Right Sibling
+          if (rightSibling <= parent->numKeys) {
+            int numNodesDeleted = borrowFromRightSibling(cursor,parent,rightSibling,maxKeys);
+
+            if(numNodesDeleted > 0){
+              return numNodesDeleted;
+            }
+          }
+          
+          //No Left/Right Sibling to borrow, thus we do Merge Nodes to resolve Underflow
+          // If left sibling exists, merge with it.
+          if (leftSibling >= 0){
+            cout << "mergeWithLeftSibling" << endl;
+            mergeWithLeftSibling(cursor,parent,leftSibling);
+          } else if (rightSibling <= parent->numKeys){
+            cout << "mergeWithRightSibling" << endl;
+            mergeWithRightSibling(cursor,parent,rightSibling);
+          }
+        } else { //No hasUnderflow
+          //todo: need to return numNodesDeleted after deletion
+          return 999; 
+        } 
+      }
+      return 999;
+    }
+
+    void deleteTargetKeyFromNode(BPNode* cursor, int pos){
+      for (int i = pos; i < cursor->numKeys; i++) {
+        cursor->keys[i] = cursor->keys[i + 1];
+        cursor->pointers[i] = cursor->pointers[i + 1];
+      }
+      cursor->numKeys--; //update numKeys (minus 1 key)
+    }
+
+    void movePointersForward(BPNode* cursor, int maxKeys){
+        // Move the last pointer forward (if any).
+        cursor->pointers[cursor->numKeys] = cursor->pointers[cursor->numKeys + 1];
+
+        // Set all forward pointers from numKeys onwards to nullptr.
+        for (int i = cursor->numKeys + 1; i < maxKeys + 1; i++) {
+          Address nullAddress;
+          nullAddress.blockAddress = nullptr;
+          nullAddress.offset = 0;
+          cursor->pointers[i] = nullAddress;
+        }
+    }
+
+    bool checkHasUnderflow(BPNode* cursor, int maxKeys){
+      if (cursor->numKeys >= (maxKeys + 1) / 2){
+        cout << "Underflow: false" << endl;
+        return false;
+      }
+      cout << "Underflow: true" << endl;
+      return true;
+    }
+
+    int borrowFromLeftSibling(BPNode* cursor, BPNode* parent, int leftSibling, int maxKeys){
+      BPNode* leftNode = (BPNode*) parent->pointers[leftSibling].blockAddress;
+
+      if (leftNode->numKeys >= (maxKeys + 1) / 2 + 1) {
+        // Shift last pointer back by one first.
+        //cout << "cursor->pointers[" << cursor->numKeys + 1 << "] was : " << static_cast<void*>(cursor->pointers[cursor->numKeys + 1].blockAddress) + cursor->pointers[cursor->numKeys + 1].offset << endl;
+        cursor->pointers[cursor->numKeys + 1] = cursor->pointers[cursor->numKeys];
+        //cout << "cursor->pointers[" << cursor->numKeys + 1 << "] : " << static_cast<void*>(cursor->pointers[cursor->numKeys + 1].blockAddress) + cursor->pointers[cursor->numKeys + 1].offset << endl;
+        //displayNode(cursor);
+
+        // Shift all remaining keys and pointers back by one.
+        for (int i = cursor->numKeys; i > 0; i--) {
+          //cout << "cursor->keys[" << i << "] : " << cursor->keys[i] << " < " << cursor->keys[i - 1] << endl;
+          //cout << "cursor->pointers[" << i << "] : " << static_cast<void*>(cursor->pointers[i].blockAddress) << " < " << static_cast<void*>(cursor->pointers[i - 1].blockAddress) << endl;
+          cursor->keys[i] = cursor->keys[i - 1];
+          cursor->pointers[i] = cursor->pointers[i - 1];
+
+          //displayNode(cursor);
+        }
+
+        // Transfer borrowed key and pointer (rightmost of left node) over to current node.
+        cursor->keys[0] = leftNode->keys[leftNode->numKeys - 1];
+        cursor->pointers[0] = leftNode->pointers[leftNode->numKeys - 1];
+        //cout << "cursor: ";
+        //displayNode(cursor);
+
+        cursor->numKeys++;
+        leftNode->numKeys--;
+
+        // Update left sibling (shift pointers left)
+        leftNode->pointers[cursor->numKeys + 1].blockAddress = cursor;
+        leftNode->pointers[cursor->numKeys + 1].offset = 0;
+        //cout << "leftnode: ";
+        //displayNode(leftNode);
+
+        // Update parent node's key
+        parent->keys[leftSibling] = cursor->keys[0];
+        //cout << "parent: ";
+        //displayNode(parent);
+
+        //todo: need to return numNodesDeleted after deletion
+        return 999;  
+      }
+
+      return 0;
+    }
+
+    int borrowFromRightSibling(BPNode* cursor, BPNode* parent, int rightSibling, int maxKeys){
+      BPNode* rightNode = (BPNode*) parent->pointers[rightSibling].blockAddress;
+
+      if (rightNode->numKeys >= (maxKeys + 1) / 2 + 1){
+        // Shift last pointer back by one first.
+        cursor->pointers[cursor->numKeys + 1] = cursor->pointers[cursor->numKeys];
+
+        // No need to shift remaining pointers and keys since we are inserting on the rightmost.
+        // Transfer borrowed key and pointer (leftmost of right node) over to rightmost of current node.
+        cursor->keys[cursor->numKeys] = rightNode->keys[0];
+        cursor->pointers[cursor->numKeys] = rightNode->pointers[0];
+        cursor->numKeys++;
+        rightNode->numKeys--;
+
+        // Update right sibling (shift keys and pointers left)
+        for (int i = 0; i < rightNode->numKeys; i++) {
+          rightNode->keys[i] = rightNode->keys[i + 1];
+          rightNode->pointers[i] = rightNode->pointers[i + 1];
+        }
+
+        // Move right sibling's last pointer left by one too.
+        rightNode->pointers[cursor->numKeys] = rightNode->pointers[cursor->numKeys + 1];
+
+        // Update parent node's key to be new lower bound of right sibling.
+        parent->keys[rightSibling - 1] = rightNode->keys[0];
+
+        //todo: need to return numNodesDeleted after deletion
+        return 999;  
+      }
+
+      return 0;
+    }
+
+    void mergeWithLeftSibling(BPNode* cursor, BPNode* parent, int leftSibling) {
+       BPNode* leftNode = (BPNode*) parent->pointers[leftSibling].blockAddress;
+
+       // Transfer all keys and pointers from current node to left node.
+      for (int i = leftNode->numKeys, j = 0; j < cursor->numKeys; i++, j++) {
+        leftNode->keys[i] = cursor->keys[j];
+        leftNode->pointers[i] = cursor->pointers[j];
+      }
+
+      // Update variables, make left node last pointer point to the next leaf node pointed to by current.
+      leftNode->numKeys += cursor->numKeys;
+      leftNode->pointers[leftNode->numKeys] = cursor->pointers[cursor->numKeys];
+
+      //todo: 
+      // We need to update the parent in order to fully remove the current node.
+      removeInternal2(parent->keys[leftSibling], parent, cursor);
+    }
+
+    void mergeWithRightSibling(BPNode* cursor, BPNode* parent, int rightSibling) {
+      BPNode* rightNode = (BPNode*) parent->pointers[rightSibling].blockAddress;
+      cout << "rightNode1: " << rightNode->pointers->blockAddress << endl;
+      cout << "rightNode2: " << parent->pointers[rightSibling].blockAddress << endl;
+      cout << "rootAddress: " << rootAddress << endl;
+
+      // Transfer all keys and pointers from right node into current.
+      for (int i = cursor->numKeys, j = 0; j < rightNode->numKeys; i++, j++) {
+        cursor->keys[i] = rightNode->keys[j];
+        cursor->pointers[i] = rightNode->pointers[j];
+      }
+
+      // Update variables, make current node last pointer point to the next leaf node pointed to by right node.
+      cursor->numKeys += rightNode->numKeys;
+      cursor->pointers[cursor->numKeys] = rightNode->pointers[rightNode->numKeys];
+
+      //auto kk = parent->keys[rightSibling-1];
+      //cout << "parent->keys[rightSibling-1]: " << kk << endl;
+      //auto m = 0;
+
+      //todo: 
+      // We need to update the parent in order to fully remove the right node.
+      //void *rightNodeAddress = parent->pointers[rightSibling].blockAddress;
+      //  removeInternal(parent->keys[rightSibling - 1], (BPNode *)parentDiskAddress, (BPNode *)rightNodeAddress);
+      removeInternal2(parent->keys[rightSibling - 1], parent, rightNode);
+    }
+
+
+    //Display Key Value from Cursor :WJ
+    int getCursorKey(BPNode *cursor,int i) { 
+      cout << "Accessing key:"<< cursor->keys[i] << endl;
+      return cursor->keys[i]; 
+    }
+
+    //refactor displayLL2 :WJ (pending 24.9.22)
+    void displayLL2(Address LLHeadAddress){
+      void *recordAddress = operator new(sizeof(Record));
+      std::memcpy(recordAddress, LLHeadAddress.blockAddress, sizeof(Record));
+
+      Record *record = (Record *)recordAddress;
+      cout << "==== Record Details ===="<< endl;
+      cout << "tconst: "<< record->tconst << endl;
+      cout << "avgRating: "<< record->avgRating << endl;
+      cout << "numVotes: "<< record->numVotes << endl;
+      cout << "====================="<< endl;
+
+      LLNode *LLs = (LLNode *)recordAddress;
+     
+   
+      // int k = countLinkedListNodes(LLs);
+      // cout << "displaying Key's LinkedList"<<endl;
+      // cout << "coming soon...."<<endl;
+
+      // Record *ll1 = (Record *)LLs;
+      // cout << "==== Record Details ===="<< endl;
+      // cout << "tconst: "<< ll1->tconst << endl;
+      // cout << "avgRating: "<< ll1->avgRating << endl;
+      // cout << "numVotes: "<< ll1->numVotes << endl;
+      // cout << "====================="<< endl;
+
+      auto m = 0;
+
+    }
+
+    //Print Current Cursor's blockAddress :WJ
+    void printCurrentPointer (BPNode *cursor,int i){
+      auto blockAddress = cursor->pointers[i].blockAddress;
+      cout << "printCurrentPointer: "<< blockAddress << endl;
+    }
+
+    //Print Current Cursor's blockAddress with Offset :WJ
+    void printCurrentPointerWithOffset (BPNode *cursor,int i){
+      auto curPtr = cursor->pointers[i];
+      auto addr = curPtr.blockAddress + curPtr.offset;
+      cout << "printCurrentPointerWithOffset: "<< addr << endl;
+    }
+
+    void *getNewPtr(BPNode *cursor,int i){
+      auto curPtr = cursor->pointers[i];
+      auto addr = curPtr.blockAddress + curPtr.offset;
+      return addr;
     }
 };
