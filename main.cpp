@@ -34,7 +34,7 @@ int main(){
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
-  ifstream inputfile("datatest.tsv");
+  ifstream inputfile("data.tsv");
   string inputstring;
 
   while(getline(inputfile, inputstring)){
@@ -153,24 +153,16 @@ int main(){
 - the height of the updated B+ tree;
 - the content of the root node and its 1st child node of the updated B+ tree;
   =============================================================
-  
-  cout <<"=====================================Experiment 5=========================================="<<endl;
-  cout<<"Deleting those movies with the attribute numVotes equal to 1000...\n";
-  
-  int nodesDeleted = tree.remove(1000);
-
-  cout << "B+ Tree after deletion" << endl;
-  cout <<"Number of times that a node is deleted (or two nodes are merged): "<< nodesDeleted << endl; 
-  cout << "Number of nodes in updated B+ Tree --- " << tree.getNumNodes() << endl;
-  cout << "Height of updated B+ tree --- " << tree.getLevels() << endl;
-  cout << endl;
-
-  tree.display(tree.getRoot(), 1);
-  cout << endl;
-
-  // reset counts for next part
-  disk.resetBlocksAccessed(); 
   */
+  cout << "==================================== Experiment 5 =========================================" << endl;
+  cout <<"Deleting those movies with the attribute numVotes equal to 1000..." << endl;
+  int nodesDeleted = tree.removeRecord(1000);
+  cout << "B+ Tree after deletion" << endl;
+  cout << "Number of times that a node is deleted (or two nodes are merged): " << nodesDeleted << endl; 
+  cout << "Number nodes of the updated B+ tree: " << tree.getTotalNumOfNode() << endl;
+  cout << "Height of updated B+ tree: " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;
+  tree.showBPlusTree(tree.getDiskRootAddress(), 1);
+  cout << "==================================== Experiment 5 End =====================================" << endl;
   
   return 0;
 }
