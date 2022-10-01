@@ -15,8 +15,7 @@ using namespace std;
 
 int main(){
   int BLOCKSIZE=0;
-  cout << "==========================================================================================" << endl;
-  cout << "Enter Block size: " << endl;
+  cout << "Enter Block size: ";
   cin >> BLOCKSIZE;
 
   // Redirect output to file
@@ -117,7 +116,6 @@ int main(){
   cout << "Number of record blocks processed: " << disk.resetNumberOfBlocksAccessed() << endl;
   cout << "==================================== Experiment 3 End =====================================" << endl;
   cout << endl;
-  
   
   /*
   =============================================================
