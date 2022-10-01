@@ -30,7 +30,7 @@ int main(){
 
   // Creating the tree 
   BPlusTree tree = BPlusTree(&disk, BLOCKSIZE);
-  cout << "Max keys for a B+ tree node: " << tree.getMaxKeys() << endl;
+  cout << "Max keys for a B+ tree node: " << tree.getMaxNumOfKeys() << endl;
 
   // Open test data
   cout << "Reading in data ... " << endl << endl;
@@ -56,16 +56,15 @@ int main(){
     record.numVotes = stoi(inputtoken[2]);
 
     //cout << "Writing record: " << record.tconst << endl;
-    Address tempAddress = disk.saveToDisk(&record, sizeof(Record));
+    Address tempAddress = disk.saveDataToDisk(&record, sizeof(Record));
 
-    //cout << "Inserting record: " << record.tconst << " to bptree " << endl;
+    cout << "Inserting record: " << record.tconst << " to bptree " << endl;
     //build the bplustree as we insert records
-    tree.insert(tempAddress, record.numVotes);
+    tree.insertRecord(tempAddress, record.numVotes);
     
     //logging
     //cout << "Inserted record " << record.tconst << " - " << record.numVotes << " at block address: " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset << " -> " << static_cast<void*>(tempAddress.blockAddress) + tempAddress.offset + sizeof(Record) << endl;
     //cout << "Inserted index " << record.tconst << " at block address: " << static_cast<void*>(testaddress.blockAddress) << " -> " << static_cast<void*>(testaddress.blockAddress) + testaddress.offset << endl;
-    cout << endl;
   }
   /*
   =============================================================
@@ -92,11 +91,11 @@ int main(){
   =============================================================
   */
   cout << "==================================== Experiment 2 =========================================" << endl;
-  cout << "Parameter n of the B+ tree    : " << tree.getMaxKeys() << endl;
-  cout << "Number of nodes of the B+ tree: " << tree.getNumNodes() << endl;
-  cout << "Height of the B+ tree         : " << tree.getBPTreeLevel(tree.getRootStorageAddress(), 0) << endl;
+  cout << "Parameter n of the B+ tree    : " << tree.getMaxNumOfKeys() << endl;
+  cout << "Number of nodes of the B+ tree: " << tree.getTotalNumOfNode() << endl;
+  cout << "Height of the B+ tree         : " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;
   cout << "Root nodes and child nodes :" << endl;
-  tree.display(tree.getRootStorageAddress(), 0);
+  tree.showBPlusTree(tree.getDiskRootAddress(), 0);
   cout << "==================================== Experiment 2 End =====================================" << endl;
   cout << endl;
 
@@ -116,7 +115,7 @@ int main(){
   cout << "tconst  avgrating  numvotes" << endl;
   int iproc = 0;
   int rproc = 0;
-  tie(iproc, rproc) = tree.search(5,5);
+  tie(iproc, rproc) = tree.searchKey(500,500);
   cout << endl;
   cout << "Number of index nodes processed: " << iproc << endl;
   cout << "Number of record blocks processed: " << disk.resetNumberOfBlocksAccessed() << endl;
@@ -138,7 +137,7 @@ int main(){
   cout << "tconst  avgrating  numvotes" << endl;
   iproc = 0;
   rproc = 0;
-  tie(iproc, rproc) = tree.search(1, 40000);
+  tie(iproc, rproc) = tree.searchKey(30000, 40000);
   cout << endl;
   cout << "Number of index nodes processed: " << iproc << endl;
   cout << "Number of record blocks processed: " << disk.resetNumberOfBlocksAccessed() << endl;

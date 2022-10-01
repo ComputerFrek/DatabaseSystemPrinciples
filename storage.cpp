@@ -73,19 +73,6 @@ public:
     return diskAddress;
   }
 
-  /*// save the data again which has been saved before
-  Address saveToDisk(void *dataAddress, size_t dataSize, Address diskAddress){
-    
-    unsigned char *currentBlockPtr = (unsigned char *)diskAddress.blockAddress;
-    short int currentRecordOffset = diskAddress.offset;
-    memcpy(currentBlockPtr + currentRecordOffset, dataAddress, dataSize);
-
-    // Update number of blocks has been accessed
-    _numOfBlockAccessed++;
-
-    return diskAddress;
-  }*/
-
   // Give a block address, offset and size, returns the data there.
   void *retrieveDataFromDisk(Address givenAddress, size_t dataSize){
     void *memoryAddress = operator new(dataSize);
