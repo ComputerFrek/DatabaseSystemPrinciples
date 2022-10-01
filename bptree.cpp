@@ -70,6 +70,8 @@ class BPlusTree {
         _rootNode = (BPNode*) parentNodeAddress.blockAddress;
       }
 
+      BPNode* newLeaf = (BPNode*) newLeafNodeAddress.blockAddress;
+
       // If parent node stil not full yet, can directly insertRecord new child node and iterate through all keys in the node to sort the keys 
       // and update the pointer pointing to child node 
       if (tempPtr->numOfKeys < _maxNumOfKey) {
