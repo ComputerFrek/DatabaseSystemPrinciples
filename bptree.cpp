@@ -883,7 +883,7 @@ class BPlusTree {
         bool continueSearch = false;
         while(!continueSearch){
           if(displayCount < 5) {
-            cout << "Current index block is : ";
+            cout << "Current index leaf block is : ";
             showNodeContent(parentNode);
             displayCount++;
           }
@@ -1001,14 +1001,23 @@ class BPlusTree {
       int numOfRecords = 0;
       LinkedListNode* parentNode = (LinkedListNode*) LLHeadAddress.blockAddress + LLHeadAddress.offset;
 
+      Address recordAddress;
+      recordAddress.blockAddress = parentNode->dataaddress.blockAddress;
+      recordAddress.offset = parentNode->dataaddress.offset;
+
+      Record* currecord = (Record*) _storage->retrieveDataFromDisk(recordAddress, sizeof(Record));
+      avgRating += currecord->avgRating;
+      numOfRecords++;
+      cout << currecord->tconst << "  " << currecord->avgRating << "  " << currecord->numVotes << endl;
+
       while(parentNode->next != nullptr){
-        Address recordAddress;
         recordAddress.blockAddress = parentNode->dataaddress.blockAddress;
         recordAddress.offset = parentNode->dataaddress.offset;
 
-        Record* currecord = (Record*) _storage->retrieveDataFromDisk(recordAddress, sizeof(Record));
+        currecord = (Record*) _storage->retrieveDataFromDisk(recordAddress, sizeof(Record));
         avgRating += currecord->avgRating;
         numOfRecords++;
+        
         cout << currecord->tconst << "  " << currecord->avgRating << "  " << currecord->numVotes << endl;
         parentNode = parentNode->next;
       }
