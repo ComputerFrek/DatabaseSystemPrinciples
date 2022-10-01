@@ -158,7 +158,6 @@ int main(){
   cout << "Number of times that a node is deleted (or two nodes are merged): " << nodesDeleted << endl; 
   cout << "Number nodes of the updated B+ tree: " << tree.getTotalNumOfNode() << endl;
   cout << "Height of updated B+ tree: " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;
-  
   cout << "==================================== Experiment 5 End =====================================" << endl;
   
   return 0;
