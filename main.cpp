@@ -14,14 +14,14 @@
 using namespace std;
 
 int main(){
-  // Allow to enter block size, in this project block size is 200B
+  // Allow to enter block size, in this project block size is 200/500B
   int BLOCKSIZE= 200;
   cout << "Enter Block size: ";
   cin >> BLOCKSIZE;
 
   // Redirect output to file
   streambuf* coutbuf = cout.rdbuf();
-  ofstream out1("output_" + to_string(BLOCKSIZE) + "B.txt");
+  ofstream out1("output_" + to_string(BLOCKSIZE) + "B2.txt");
   cout.rdbuf(out1.rdbuf());
 
   //Allocate memory on disk to store record
@@ -56,7 +56,7 @@ int main(){
     //cout << "Writing record: " << record.tconst << endl;
     Address tempAddress = disk.saveDataToDisk(&record, sizeof(Record));
 
-    cout << "Inserting record: " << record.tconst << " to bptree " << endl;
+    //cout << "Inserting record: " << record.tconst << " to bptree " << endl;
     //build the bplustree as we insert records
     tree.insertRecord(tempAddress, record.numVotes);
   }
@@ -91,7 +91,7 @@ int main(){
   cout << "Number of nodes of the B+ tree: " << tree.getTotalNumOfNode() << endl;
   cout << "Height of the B+ tree         : " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;
   cout << "Root nodes and child nodes :" << endl;
-  tree.showBPlusTree(tree.getDiskRootAddress(), 0, 1);
+  tree.showBPlusTree(tree.getDiskRootAddress(), 0, 9999);
   cout << "==================================== Experiment 2 End =====================================" << endl;
   cout << endl;
 
@@ -153,7 +153,7 @@ int main(){
   cout <<"Deleting those movies with the attribute numVotes equal to 1000..." << endl;
   int nodesDeleted = tree.removeRecord(1000);
   cout << "B+ Tree after deletion" << endl;
-  tree.showBPlusTree(tree.getDiskRootAddress(), 0, 1);
+  tree.showBPlusTree(tree.getDiskRootAddress(), 0, 9999);
   cout << "Number of times that a node is deleted (or two nodes are merged): " << nodesDeleted << endl; 
   cout << "Number nodes of the updated B+ tree: " << tree.getTotalNumOfNode() << endl;
   cout << "Height of updated B+ tree: " << tree.getBPTreeLevel(tree.getDiskRootAddress(), 0) << endl;

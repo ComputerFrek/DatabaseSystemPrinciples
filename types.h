@@ -2,8 +2,8 @@
 #define TYPES_H
 
 // Defines an address of a record stored as a block address with an offset.
-struct Address { // 16bytes?
-  void* blockAddress; //8bytes?
+struct Address { // 20bytes
+  void* blockAddress; //8bytes
   short int offset; //
 };
 

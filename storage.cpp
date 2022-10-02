@@ -14,10 +14,10 @@ class DiskStorage{
 private:
 
   size_t _sizeOfMaxDiskStorage;   // Maximum disk capacity allocated for storage
-  size_t _sizeOfAllBlcokUsed;     // Current total size used of all block(each single block memory may not fully used up).
+  size_t _sizeOfAllBlcokUsed;     // Current total size used of all block (each single block memory may not fully used up).
   size_t _sizeOfActualUsed;       // Total size of records stored in storage
   size_t _sizeOfCurrentBlockUsed; // Size of current single block used
-  size_t _sizeOfEachBlock;        // Size of every single block, in this project is 200 bytes
+  size_t _sizeOfEachBlock;        // Size of every single block, in this project is 200/500 bytes
 
 
   int _numOfBlockAllocated;       // Indicate the total number of block has been allocated for now 

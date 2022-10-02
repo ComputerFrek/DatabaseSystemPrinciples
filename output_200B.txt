@@ -1,0 +1,220 @@
+Size: 500000000 - _sizeOfEachBlock: 200 - 0x18e415c6040 -> 0x18e5f29c540
+Max keys for a B+ tree node: 8
+Reading in data ... 
+
+==================================== Experiment 1 =========================================
+Number of blocks : 107032
+Size of database : 21406
+==================================== Experiment 1 End =====================================
+
+==================================== Experiment 2 =========================================
+Parameter n of the B+ tree    : 8
+Number of nodes of the B+ tree: 107909
+Height of the B+ tree         : 56
+Root nodes and child nodes :
+Current B+ tree Level is:  0  0x18e65f2c5e0 - |0x18e65508290|12072|0x18e66abfde0|15526|0x18e668b7e40|21023|0x18e66690a90|22027|0x18e6669f250|31207|0x18e6680bcf0|80993|0x18e65f2c480|x|null|x|null|
+Current B+ tree Level is:  1    0x18e65508290 - |0x18e64d61550|10031|0x18e6669f0f0|14274|0x18e663dc7a0|14537|0x18e6612e2c0|15323|0x18e667531d0|16974|0x18e65b87f70|18391|0x18e65e71e50|x|null|x|null|
+Current B+ tree Level is:  1    0x18e66abfde0 - |0x18e66413870|12326|0x18e668f9ed0|12933|0x18e666e1560|13806|0x18e66abfbb0|x|null|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e668b7e40 - |0x18e65fd8540|15540|0x18e654bec20|18411|0x18e65402ee0|20775|0x18e6524dee0|x|null|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e66690a90 - |0x18e65c3e000|21369|0x18e665c32f0|22166|0x18e66349340|24073|0x18e65cab980|x|null|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e6669f250 - |0x18e65d1c8f0|23660|0x18e66927bb0|27035|0x18e661f8d70|38392|0x18e65508130|56425|0x18e65f2c320|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e6680bcf0 - |0x18e65a017a0|32254|0x18e6634cc10|34689|0x18e6650bca0|37628|0x18e667c94d0|39213|0x18e6699a390|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e65f2c480 - |0x18e65c945a0|98521|0x18e657d8090|132813|0x18e65d43570|336028|0x18e655f4060|x|null|x|null|x|null|x|null|x|null|
+==================================== Experiment 2 End =====================================
+
+==================================== Experiment 3 =========================================
+Retrieving the attribute tconst of those movies with numVotes equal to 500:
+tconst  avgrating  numvotes
+Index block:   0x18e65f2c5e0 - |0x18e65508290|12072|0x18e66abfde0|15526|0x18e668b7e40|21023|0x18e66690a90|22027|0x18e6669f250|31207|0x18e6680bcf0|80993|0x18e65f2c480|x|null|x|null|
+Index block:   0x18e65508290 - |0x18e64d61550|10031|0x18e6669f0f0|14274|0x18e663dc7a0|14537|0x18e6612e2c0|15323|0x18e667531d0|16974|0x18e65b87f70|18391|0x18e65e71e50|x|null|x|null|
+Index block:   0x18e64d61550 - |0x18e647b1ba0|7872|0x18e668b7ce0|8317|0x18e66503190|9005|0x18e662e6cf0|9913|0x18e66a14d90|13030|0x18e65d1c790|13528|0x18e657decf0|x|null|x|null|
+Index block:   0x18e647b1ba0 - |0x18e6435eb50|7060|0x18e66681bb0|7401|0x18e6612e160|8698|0x18e6659cbc0|10533|0x18e65b006b0|11010|0x18e65b37e30|11739|0x18e656007d0|12259|0x18e6524dd80|x|null|
+Index block:   0x18e6435eb50 - |0x18e63edc2b0|5867|0x18e66a14c30|6018|0x18e665a10c0|6227|0x18e6636bf70|6643|0x18e65fd83e0|8175|0x18e6652ee00|x|null|x|null|x|null|
+Current index leaf block is :   0x18e5f3e9ac0 - |0x18e5f3e9660|499-103|0x18e5f4aeb10|500-107|0x18e5f4e92f0|501-103|0x18e5f41ae60|502-115|0x18e5f4325b0|503-104|0x18e5f3ffe80|504-99|0x18e5f4ae930|x|null|x|null|
+tt0041956  6.5  500
+tt0041956  6.5  500
+tt0047361  7.3  500
+tt0047434  6.3  500
+tt0051500  5.1  500
+tt0052815  6.7  500
+tt0054298  3.7  500
+tt0062345  4.7  500
+tt0069064  5.8  500
+tt0070783  5.1  500
+tt0082275  7.1  500
+tt0082841  5.1  500
+tt0085198  7  500
+tt0090356  3.8  500
+tt0099259  6  500
+tt0100811  5.3  500
+tt0106600  4.8  500
+tt0119415  4.6  500
+tt0120462  4.5  500
+tt0149695  4.3  500
+tt0163456  8.1  500
+tt0184456  5.7  500
+tt0214362  8.1  500
+tt0218000  6.3  500
+tt0289115  5.1  500
+tt0303487  5.9  500
+tt0314564  2.9  500
+tt0327085  5.5  500
+tt0327546  6.4  500
+tt0398451  6.5  500
+tt0424365  5.5  500
+tt0450955  3.9  500
+tt0514442  9.1  500
+tt0517623  8.1  500
+tt0558715  8.1  500
+tt0582480  8.3  500
+tt0588114  8.7  500
+tt0588139  8.1  500
+tt0588187  8.2  500
+tt0588214  8.6  500
+tt0629708  8.1  500
+tt0640298  8  500
+tt0640308  8.2  500
+tt0647512  7.2  500
+tt0716912  7.6  500
+tt0720140  7.1  500
+tt0807689  8.6  500
+tt11691696  6.4  500
+tt1261908  8.1  500
+tt1340802  6  500
+tt1365490  6.5  500
+tt1371697  7.9  500
+tt1376451  5.9  500
+tt1421383  7.6  500
+tt1515736  7.5  500
+tt1535989  6.4  500
+tt1571100  5.9  500
+tt1592534  6.6  500
+tt1632756  7.4  500
+tt1640740  7.7  500
+tt1648683  7.5  500
+tt1684558  5.3  500
+tt1711021  6.2  500
+tt1727519  4.1  500
+tt1857596  7.8  500
+tt2040651  7.8  500
+tt2236257  7.4  500
+tt2247719  7.7  500
+tt2365211  8.1  500
+tt2662228  6.6  500
+tt2764038  8.3  500
+tt2813064  5.6  500
+tt3127434  8.1  500
+tt3203366  8.2  500
+tt3231390  3.6  500
+tt3263598  7.3  500
+tt3276280  8.3  500
+tt3398808  5.5  500
+tt3440780  7.1  500
+tt3592904  2.3  500
+tt3683072  6  500
+tt3916858  7.8  500
+tt4038966  6.4  500
+tt4247300  7.9  500
+tt4392820  8  500
+tt4493298  7.9  500
+tt4627488  8  500
+tt4680568  4.6  500
+tt4713652  8.2  500
+tt4897608  7.7  500
+tt6038946  5.5  500
+tt6054370  5.6  500
+tt6222376  8  500
+tt6232560  5.2  500
+tt6318954  4.6  500
+tt6985094  7.1  500
+tt7008310  4.5  500
+tt7431738  7.2  500
+tt7457714  7.8  500
+tt7517336  8.1  500
+tt7689514  8.5  500
+tt7860116  8.4  500
+tt8044824  9.2  500
+tt8960572  6  500
+tt9454484  8.7  500
+tt9614612  7.7  500
+tt9680914  7.1  500
+Average of rating: 6.69626
+Searching completed.
+
+Number of index nodes processed: 49
+Number of record blocks processed: 107
+==================================== Experiment 3 End =====================================
+
+==================================== Experiment 4 =========================================
+Retrieving the attribute tconst of those movies with numVotes from 30,000 to 40,000 (inclusively)...
+tconst  avgrating  numvotes
+Index block:   0x18e65f2c5e0 - |0x18e65508290|12072|0x18e66abfde0|15526|0x18e668b7e40|21023|0x18e66690a90|22027|0x18e6669f250|31207|0x18e6680bcf0|80993|0x18e65f2c480|x|null|x|null|
+Index block:   0x18e6669f250 - |0x18e65d1c8f0|23660|0x18e66927bb0|27035|0x18e661f8d70|38392|0x18e65508130|56425|0x18e65f2c320|x|null|x|null|x|null|x|null|
+Index block:   0x18e661f8d70 - |0x18e65a45b60|27942|0x18e66ba1290|28343|0x18e6591bc50|29192|0x18e66313290|29814|0x18e65b68a00|30248|0x18e6680ba70|30778|0x18e663d9020|x|null|x|null|
+Current index leaf block is :   0x18e65b68a00 - |0x18e65acbe40|29814-1|0x18e66b18e80|29834-1|0x18e66392cb0|29861-1|0x18e666d77b0|29900-1|0x18e664db340|29956-1|0x18e6691e8e0|30168-1|0x18e6680bca0|30175-1|0x18e6680ba70|x|null|
+tt9053874  6  30168
+tt8758202  7.5  30175
+Current index leaf block is :   0x18e6680ba70 - |0x18e663d9370|30248-1|0x18e66603a10|30453-1|0x18e65987420|30569-1|0x18e65fa57d0|30726-1|0x18e663d9020|x|null|x|null|x|null|x|null|
+tt7668518  6.8  30248
+tt8201170  5.8  30453
+tt5691670  6.5  30569
+tt6769208  9.3  30726
+Current index leaf block is :   0x18e663d9020 - |0x18e65d5eaa0|30778-1|0x18e66485c70|30797-1|0x18e66059680|30863-1|0x18e65a4a7f0|30882-1|0x18e65b68b60|31034-1|0x18e65a017a0|x|null|x|null|x|null|
+tt6317068  8.3  30778
+tt7826376  8  30797
+tt6902676  6.3  30863
+tt5816682  6.8  30882
+tt6000478  6.5  31034
+Current index leaf block is :   0x18e65a017a0 - |0x18e65a01af0|31207-1|0x18e65f44390|31450-1|0x18e6599ebe0|31452-1|0x18e66492630|31770-1|0x18e659a1720|31831-1|0x18e6591be30|32019-1|0x18e6634cc10|x|null|x|null|
+tt5774450  6.7  31207
+tt6697582  7.1  31450
+tt5709234  7.6  31452
+tt7838252  8.2  31770
+tt5710984  6.6  31831
+tt5619332  5.6  32019
+Current index leaf block is :   0x18e6634cc10 - |0x18e65d5cb50|32254-1|0x18e662c8db0|32292-1|0x18e6672dc90|33211-1|0x18e66450820|33394-1|0x18e663cefd0|33488-1|0x18e66a75640|34489-1|0x18e6634ce40|34514-1|0x18e66b0e100|34564-1|0x18e6650bca0|
+tt6316138  8.5  32254
+tt7431594  1.9  32292
+tt8503298  6.8  33211
+tt7772580  6.1  33394
+tt7660850  8.6  33488
+tt9446688  7.6  34489
+tt7549996  6.8  34514
+tt9680440  7.8  34564
+tt7671598  7.6  34689
+tt9412098  7.2  34985
+tt7315484  5.3  35095
+tt7958736  5.6  36330
+tt7949218  7.6  36535
+tt8110640  6.2  36954
+tt8503618  8.7  37628
+tt8806524  7.6  37708
+tt7734218  6.2  37788
+tt8688634  6.6  37809
+tt8623904  6.5  38147
+tt9612516  6.8  39085
+tt9139220  6.8  39213
+tt9166678  9.5  39561
+Average of rating: 6.9718
+Searching completed.
+
+Number of index nodes processed: 11
+Number of record blocks processed: 39
+==================================== Experiment 4 End =====================================
+
+==================================== Experiment 5 =========================================
+Deleting those movies with the attribute numVotes equal to 1000...
+Underflow: false
+B+ Tree after deletion
+Current B+ tree Level is:  0  0x18e65f2c5e0 - |0x18e65508290|12072|0x18e66abfde0|15526|0x18e668b7e40|21023|0x18e66690a90|22027|0x18e6669f250|31207|0x18e6680bcf0|80993|0x18e65f2c480|x|null|x|null|
+Current B+ tree Level is:  1    0x18e65508290 - |0x18e64d61550|10031|0x18e6669f0f0|14274|0x18e663dc7a0|14537|0x18e6612e2c0|15323|0x18e667531d0|16974|0x18e65b87f70|18391|0x18e65e71e50|x|null|x|null|
+Current B+ tree Level is:  1    0x18e66abfde0 - |0x18e66413870|12326|0x18e668f9ed0|12933|0x18e666e1560|13806|0x18e66abfbb0|x|null|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e668b7e40 - |0x18e65fd8540|15540|0x18e654bec20|18411|0x18e65402ee0|20775|0x18e6524dee0|x|null|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e66690a90 - |0x18e65c3e000|21369|0x18e665c32f0|22166|0x18e66349340|24073|0x18e65cab980|x|null|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e6669f250 - |0x18e65d1c8f0|23660|0x18e66927bb0|27035|0x18e661f8d70|38392|0x18e65508130|56425|0x18e65f2c320|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e6680bcf0 - |0x18e65a017a0|32254|0x18e6634cc10|34689|0x18e6650bca0|37628|0x18e667c94d0|39213|0x18e6699a390|x|null|x|null|x|null|x|null|
+Current B+ tree Level is:  1    0x18e65f2c480 - |0x18e65c945a0|98521|0x18e657d8090|132813|0x18e65d43570|336028|0x18e655f4060|x|null|x|null|x|null|x|null|x|null|
+Number of times that a node is deleted (or two nodes are merged): 0
+Number nodes of the updated B+ tree: 107909
+Height of updated B+ tree: 56
+==================================== Experiment 5 End =====================================
