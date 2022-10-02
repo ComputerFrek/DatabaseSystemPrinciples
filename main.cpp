@@ -14,7 +14,9 @@
 using namespace std;
 
 int main(){
-  int BLOCKSIZE=0;
+
+  // Allow to enter block size, in this project block size is 200kB
+  int BLOCKSIZE= 200;
   cout << "Enter Block size: ";
   cin >> BLOCKSIZE;
 
@@ -23,7 +25,7 @@ int main(){
   ofstream out1("output_" + to_string(BLOCKSIZE) + "B.txt");
   cout.rdbuf(out1.rdbuf());
 
-  //Creating disk for record
+  //Allocate memory on disk to store record
   DiskStorage disk(500000000, BLOCKSIZE);  // 500MB
 
   // Initialize the tree 
@@ -32,25 +34,25 @@ int main(){
 
   cout << "Reading in data ... " << endl << endl;
   ifstream inputfile("data.tsv");
-  string inputstring;
+  string inputString;
 
-  while(getline(inputfile, inputstring)){
-    if(inputstring.rfind("tconst", 0) == 0){
+  while(getline(inputfile, inputString)){
+    if(inputString.rfind("tconst", 0) == 0){
         continue;
     }
 
-    vector <string> inputtoken;
-    istringstream iss(inputstring);
+    vector <string> inputToken;
+    istringstream iss(inputString);
     string word;
 
     while(getline(iss, word, '\t')){
-        inputtoken.push_back(word);
+        inputToken.push_back(word);
     }
     
     Record record;
-    strcpy(record.tconst, inputtoken[0].c_str());
-    record.avgRating = stod(inputtoken[1]);
-    record.numVotes = stoi(inputtoken[2]);
+    strcpy(record.tconst, inputToken[0].c_str());
+    record.avgRating = stod(inputToken[1]);
+    record.numVotes = stoi(inputToken[2]);
 
     //cout << "Writing record: " << record.tconst << endl;
     Address tempAddress = disk.saveDataToDisk(&record, sizeof(Record));
