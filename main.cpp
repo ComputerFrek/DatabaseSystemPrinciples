@@ -14,8 +14,7 @@
 using namespace std;
 
 int main(){
-
-  // Allow to enter block size, in this project block size is 200kB
+  // Allow to enter block size, in this project block size is 200B
   int BLOCKSIZE= 200;
   cout << "Enter Block size: ";
   cin >> BLOCKSIZE;

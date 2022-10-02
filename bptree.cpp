@@ -397,7 +397,7 @@ class BPlusTree {
         rightnode->numOfKeys = 0;
         _numOfNodes--;
 
-        return removeInternalNode(parentparentnode->ptrToKeys[rightsibling - 1], parentNode, rightnode);
+        return removeInternalNode(parentparentnode->ptrToKeys[rightSibling - 1], parentNode, rightnode);
       }
     }
 
